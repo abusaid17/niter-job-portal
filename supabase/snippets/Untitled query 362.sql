@@ -1,0 +1,1 @@
+select id, email, role, status from public.users where email = 'mdabusaid7068@gmail.com';
