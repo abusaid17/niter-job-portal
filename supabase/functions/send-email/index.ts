@@ -1,8 +1,8 @@
 // Edge Function: send-email
 // Sends transactional emails through Resend (verification, reset, interview, status, approvals).
 
-import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
+import { Resend } from "npm:resend";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'))
 const supabase = createClient(
