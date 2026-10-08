@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { USER_STATUS, USER_STATUS_BADGE } from '../../utils/labels'
@@ -6,12 +7,18 @@ import { ROLE_LABELS } from '../../utils/roles'
 import { formatDateTime } from '../../utils/format'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
 
+const VALID_ROLES = ['ALL', 'ADMIN', 'STUDENT', 'ALUMNI', 'RECRUITER', 'FACULTY']
+
 export default function AdminUsersPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const { session } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState('ALL')
+  const [roleFilter, setRoleFilter] = useState(() => {
+    const role = searchParams.get('role')
+    return VALID_ROLES.includes(role) ? role : 'ALL'
+  })
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
@@ -110,7 +117,10 @@ export default function AdminUsersPage() {
         <input className="input input-bordered w-full max-w-xs" placeholder="Search name or email…" value={query} onChange={(e) => setQuery(e.target.value)} />
         <div className="flex flex-wrap gap-1">
           {roles.map((r) => (
-            <button key={r} className={`btn btn-xs ${roleFilter === r ? 'btn-primary' : 'btn-outline'}`} onClick={() => setRoleFilter(r)}>
+            <button key={r} className={`btn btn-xs ${roleFilter === r ? 'btn-primary' : 'btn-outline'}`} onClick={() => {
+              setRoleFilter(r)
+              setSearchParams({ role: r === 'ALL' ? null : r })
+            }}>
               {r === 'ALL' ? 'All' : ROLE_LABELS[r] ?? r}
             </button>
           ))}

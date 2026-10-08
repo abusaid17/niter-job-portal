@@ -5,11 +5,14 @@ import { useAuth } from '../../hooks/useAuth'
 import { REGISTERABLE_ROLES, ROLE_LABELS, ROLES, roleHome } from '../../utils/roles'
 import { AuthLayout } from '../../components/auth/AuthLayout'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function RegisterPage() {
   const { session, role, loading, signUp } = useAuth()
   const navigate = useNavigate()
   const [formError, setFormError] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -112,15 +115,25 @@ export default function RegisterPage() {
           <div className="label">
             <span className="label-text">Password</span>
           </div>
-          <input
-            type="password"
-            className="input input-bordered w-full"
-            placeholder="At least 8 characters"
-            {...register('password', {
-              required: 'Password is required',
-              minLength: { value: 8, message: 'Password must be at least 8 characters' },
-            })}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className="input input-bordered w-full pr-10"
+              placeholder="At least 8 characters"
+              {...register('password', {
+                required: 'Password is required',
+                minLength: { value: 8, message: 'Password must be at least 8 characters' },
+              })}
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
           {errors.password && (
             <div className="label">
               <span className="label-text-alt text-error">{errors.password.message}</span>
@@ -132,15 +145,25 @@ export default function RegisterPage() {
           <div className="label">
             <span className="label-text">Confirm password</span>
           </div>
-          <input
-            type="password"
-            className="input input-bordered w-full"
-            placeholder="Repeat your password"
-            {...register('confirmPassword', {
-              required: 'Please confirm your password',
-              validate: (value) => value === watch('password') || 'Passwords do not match',
-            })}
-          />
+          <div className="relative">
+            <input
+              type={showConfirmPassword ? 'text' : 'password'}
+              className="input input-bordered w-full pr-10"
+              placeholder="Repeat your password"
+              {...register('confirmPassword', {
+                required: 'Please confirm your password',
+                validate: (value) => value === watch('password') || 'Passwords do not match',
+              })}
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
+              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+            >
+              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
           {errors.confirmPassword && (
             <div className="label">
               <span className="label-text-alt text-error">{errors.confirmPassword.message}</span>

@@ -5,12 +5,14 @@ import { useAuth } from '../../hooks/useAuth'
 import { roleHome } from '../../utils/roles'
 import { AuthLayout } from '../../components/auth/AuthLayout'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const { session, role, loading, signIn } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [formError, setFormError] = useState(null)
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -69,12 +71,22 @@ export default function LoginPage() {
           <div className="label">
             <span className="label-text">Password</span>
           </div>
-          <input
-            type="password"
-            className="input input-bordered w-full"
-            placeholder="Your password"
-            {...register('password', { required: 'Password is required' })}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              className="input input-bordered w-full pr-10"
+              placeholder="Your password"
+              {...register('password', { required: 'Password is required' })}
+            />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
           {errors.password && (
             <div className="label">
               <span className="label-text-alt text-error">{errors.password.message}</span>

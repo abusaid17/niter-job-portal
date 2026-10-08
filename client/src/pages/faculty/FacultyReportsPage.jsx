@@ -30,7 +30,7 @@ function MiniTable({ title, rows, valueFormatter }) {
 }
 
 export default function FacultyReportsPage() {
-  const { session } = useAuth()
+  const { session, loading: authLoading } = useAuth()
   const [students, setStudents] = useState([])
   const [placements, setPlacements] = useState([])
   const [events, setEvents] = useState([])
@@ -39,7 +39,11 @@ export default function FacultyReportsPage() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (authLoading) return
+    if (!session?.user?.id) {
+      setLoading(false)
+      return
+    }
     let active = true
     Promise.all([
       supabase.from('students').select('id, department, batch, cgpa, users(is_verified)').order('id'),
@@ -60,7 +64,7 @@ export default function FacultyReportsPage() {
     return () => {
       active = false
     }
-  }, [session])
+  }, [session, authLoading])
 
   const stats = useMemo(() => {
     const verified = students.filter((s) => s.users?.is_verified).length
@@ -134,7 +138,7 @@ export default function FacultyReportsPage() {
       .sort((a, b) => b.value - a.value)
   }, [students, placements])
 
-  if (loading) {
+  if (authLoading || loading) {
     return <LoadingScreen />
   }
 

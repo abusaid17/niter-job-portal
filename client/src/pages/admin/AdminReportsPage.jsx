@@ -52,14 +52,18 @@ function ChartCard({ title, children, height = 250 }) {
 }
 
 export default function AdminReportsPage() {
-  const { session } = useAuth()
+  const { session, loading: authLoading } = useAuth()
   const [stats, setStats] = useState({})
   const [placements, setPlacements] = useState([])
   const [jobReports, setJobReports] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!session?.user?.id) return
+    if (authLoading) return
+    if (!session?.user?.id) {
+      setLoading(false)
+      return
+    }
     let active = true
     Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'STUDENT'),
@@ -86,7 +90,7 @@ export default function AdminReportsPage() {
       setLoading(false)
     })
     return () => { active = false }
-  }, [session])
+  }, [session, authLoading])
 
   const byDept = useMemo(() => {
     const map = {}
@@ -148,7 +152,7 @@ export default function AdminReportsPage() {
     }
   }
 
-  if (loading) return <LoadingScreen />
+  if (authLoading || loading) return <LoadingScreen />
 
   return (
     <div className="flex flex-col gap-6">

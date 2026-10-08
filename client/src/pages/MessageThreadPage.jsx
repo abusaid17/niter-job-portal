@@ -70,7 +70,7 @@ export default function MessageThreadPage() {
                     mine ? 'bg-primary text-primary-content' : 'bg-base-200'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                  <p className="whitespace-pre-wrap break words">{m.body}</p>
                   <span className={`mt-0.5 block text-[10px] ${mine ? 'text-primary-content/70' : 'text-base-content/50'}`}>
                     {formatDateTime(m.created_at)}
                   </span>

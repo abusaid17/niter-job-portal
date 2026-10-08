@@ -1,10 +1,12 @@
 import { useNotifications } from '../hooks/useProfiles'
+import { useAuth } from '../hooks/useAuth'
 import { formatDateTime } from '../utils/format'
 import { LoadingScreen } from '../components/ui/LoadingScreen'
 export default function NotificationsPage() {
+  const { loading: authLoading } = useAuth()
   const { items, loading, markAllRead, markRead, remove } = useNotifications({ limit: 100 })
 
-  if (loading) return <LoadingScreen />
+  if (authLoading || loading) return <LoadingScreen />
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-4">

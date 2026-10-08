@@ -62,10 +62,10 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Students" value={counts.students} to="/admin/users" />
-        <StatTile label="Alumni" value={counts.alumni} to="/admin/users" />
-        <StatTile label="Recruiters" value={counts.recruiters} to="/admin/users" />
-        <StatTile label="Faculty" value={counts.faculty} to="/admin/users" />
+        <StatTile label="Students" value={counts.students} to="/admin/users?role=STUDENT" />
+        <StatTile label="Alumni" value={counts.alumni} to="/admin/users?role=ALUMNI" />
+        <StatTile label="Recruiters" value={counts.recruiters} to="/admin/users?role=RECRUITER" />
+        <StatTile label="Faculty" value={counts.faculty} to="/admin/users?role=FACULTY" />
         <StatTile label="Active jobs" value={counts.activeJobs} to="/admin/jobs" />
         <StatTile label="Scheduled interviews" value={counts.interviews} to="/admin/interviews" />
         <StatTile label="Selected candidates" value={counts.selected} to="/admin/applications" />

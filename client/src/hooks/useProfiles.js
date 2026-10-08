@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
@@ -119,11 +119,12 @@ export function useFacultyProfile() {
 }
 
 export function useNotifications({ limit = 20 } = {}) {
-  const { session } = useAuth()
+  const { session, loading: authLoading } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
   const userId = session?.user?.id
+  const channelRef = useRef(null)
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -145,11 +146,17 @@ export function useNotifications({ limit = 20 } = {}) {
   }, [userId, limit])
 
   useEffect(() => {
+    if (authLoading) return
     refresh()
-  }, [refresh])
+  }, [refresh, authLoading])
 
   useEffect(() => {
-    if (!userId) return undefined
+    if (!userId || authLoading) return undefined
+
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
+    }
 
     const channel = supabase
       .channel(`notifications:${userId}`)
@@ -177,12 +184,23 @@ export function useNotifications({ limit = 20 } = {}) {
           }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[useNotifications] Realtime subscribed')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[useNotifications] Realtime channel error')
+        }
+      })
+
+    channelRef.current = channel
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
-  }, [userId, limit])
+  }, [userId, limit, authLoading])
 
   async function markAllRead() {
     if (!userId) return
