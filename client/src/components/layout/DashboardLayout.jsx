@@ -71,7 +71,7 @@ const ADMIN_NAV = [
 const MESSAGES_NAV = { to: '/messages', label: 'Messages' }
 const NOTIFICATIONS_NAV = { to: '/notifications', label: 'Notifications' }
 
-function NotificationsBell({ unread, items }) {
+function NotificationsBell({ unread, items, markRead, markAllRead }) {
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
@@ -113,9 +113,30 @@ function NotificationsBell({ unread, items }) {
                 <span className="text-sm font-medium">{n.title}</span>
                 {n.message && <span className="text-xs text-base-content/70">{n.message}</span>}
                 <span className="text-xs text-base-content/40">{formatDateTime(n.created_at)}</span>
+                {!n.is_read && (
+                  <button
+                    className="btn btn-xs btn-ghost btn-primary mt-1"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      markRead(n.id)
+                    }}
+                  >
+                    Mark read
+                  </button>
+                )}
               </div>
             </li>
           ))}
+          {unread > 0 && (
+            <li className="border-t border-base-200 p-2">
+              <button
+                className="btn btn-sm btn-outline w-full"
+                onClick={markAllRead}
+              >
+                Mark all as read
+              </button>
+            </li>
+          )}
           <li className="border-t border-base-200">
             <Link to="/notifications" className="text-sm font-medium text-primary">
               View all notifications
@@ -129,17 +150,12 @@ function NotificationsBell({ unread, items }) {
 
 export function DashboardLayout() {
   const { session, profile, role, signOut } = useAuth()
-  const { items, unread, markAllRead } = useNotifications()
+  const { items, unread, markAllRead, markRead } = useNotifications()
   const { unread: unreadMessages } = useConversations()
   const navigate = useNavigate()
   const [loggingOut, setLoggingOut] = useState(false)
-  const [open, setOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const drawerToggleRef = useRef(null)
-
-  useEffect(() => {
-    if (open) markAllRead()
-  }, [open, markAllRead])
 
   if (!session) {
     return <Navigate to="/login" replace />
@@ -184,7 +200,7 @@ export function DashboardLayout() {
               </Link>
             </div>
             <div className="flex items-center gap-2 px-1">
-              <NotificationsBell unread={unread} items={items} />
+              <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
             </div>
           </header>
 
@@ -193,7 +209,7 @@ export function DashboardLayout() {
               {ROLE_LABELS[role]} panel
             </div>
             <div className="flex items-center gap-2 px-2">
-              <NotificationsBell unread={unread} items={items} />
+              <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
             </div>
           </header>
 
@@ -317,7 +333,7 @@ export function DashboardLayout() {
               ))}
             </ul>
           </details>
-          <NotificationsBell unread={unread} items={items} />
+          <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
 
           <span className="hidden text-sm font-medium md:block">{profile?.name || session.user.email}</span>
           <button type="button" className="btn btn-sm btn-outline" onClick={onLogout} disabled={loggingOut}>

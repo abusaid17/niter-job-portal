@@ -90,7 +90,7 @@ export default function StudentDashboardPage() {
   const completion = useMemo(() => {
     const checks = [
       student?.student_id && student?.department,
-      student?.batch,
+      student?.session,
       student?.phone,
       student?.bio || student?.github_url || student?.linkedin_url,
       counts.education > 0,

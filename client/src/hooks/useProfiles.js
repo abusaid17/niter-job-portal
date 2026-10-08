@@ -123,38 +123,43 @@ export function useNotifications({ limit = 20 } = {}) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const userId = session?.user?.id
+
   const refresh = useCallback(async () => {
-    if (!session) {
+    if (!userId) {
       setItems([])
       setLoading(false)
       return
     }
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit)
+    if (error) {
+      console.error('[useNotifications] fetch error:', error.message)
+    }
     setItems(data ?? [])
     setLoading(false)
-  }, [session, limit])
+  }, [userId, limit])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
   useEffect(() => {
-    if (!session) return undefined
+    if (!userId) return undefined
 
     const channel = supabase
-      .channel(`notifications:${session.user.id}`)
+      .channel(`notifications:${userId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${session.user.id}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           if (payload.eventType === 'INSERT') {
@@ -177,20 +182,20 @@ export function useNotifications({ limit = 20 } = {}) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [session, limit])
+  }, [userId, limit])
 
   async function markAllRead() {
-    if (!session) return
+    if (!userId) return
     await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('user_id', session.user.id)
+      .eq('user_id', userId)
       .is('is_read', false)
     await refresh()
   }
 
   async function markRead(id) {
-    if (!session) return
+    if (!userId) return
     await supabase
       .from('notifications')
       .update({ is_read: true })
@@ -199,7 +204,7 @@ export function useNotifications({ limit = 20 } = {}) {
   }
 
   async function remove(id) {
-    if (!session) return
+    if (!userId) return
     await supabase.from('notifications').delete().eq('id', id)
     await refresh()
   }

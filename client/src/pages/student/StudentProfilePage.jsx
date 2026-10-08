@@ -83,7 +83,7 @@ function ProfileView({ profile, email, onEdit }) {
   const facts = [
     ['Student ID', profile?.student_id],
     ['Department', profile?.department ? deptLabel(profile.department) : null],
-    ['Session', profile?.batch],
+    ['Session', profile?.session],
     ['Semester', profile?.semester],
     ['CGPA', profile?.cgpa != null ? Number(profile.cgpa).toFixed(2) : null],
   ].filter(([, v]) => v != null && String(v).trim() !== '')
@@ -216,7 +216,7 @@ export default function StudentProfilePage() {
       setFields({
         student_id: profile.student_id ?? '',
         department: deptCode(profile.department ?? '') ?? '',
-        session: profile.batch ?? '',
+        session: profile.session ?? '',
         semester: profile.semester ?? '',
         cgpa: profile.cgpa ?? '',
         phone: profile.phone ?? '',
