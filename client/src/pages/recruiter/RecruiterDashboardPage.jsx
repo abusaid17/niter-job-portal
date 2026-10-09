@@ -6,6 +6,7 @@ import { useRecruiterProfile } from '../../hooks/useProfiles'
 import { APPLICATION_BADGE, APPLICATION_STATUS, JOB_STATUS, JOB_STATUS_BADGE } from '../../utils/labels'
 import { formatDate } from '../../utils/format'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
+import { DashboardLists } from '../../components/recruiter/DashboardLists'
 
 const OPEN_STATUSES = ['DRAFT', 'PENDING_APPROVAL', 'PUBLISHED']
 
@@ -122,6 +123,8 @@ export default function RecruiterDashboardPage() {
         <StatTile label="Interviews" value={loading ? '…' : stats.interviews} />
         <StatTile label="Closed jobs" value={loading ? '…' : stats.closed} />
       </div>
+
+      {jobs.length > 0 && <DashboardLists jobIds={jobs.map((j) => j.id)} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div>
