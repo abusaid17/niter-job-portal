@@ -31,14 +31,24 @@ export default function RecruiterDashboardPage() {
     if (!user?.id) return
     let active = true
     async function load() {
-      const [jobsR, appsR, interR] = await Promise.all([
+      const [recruiterR, jobsR, interR] = await Promise.all([
+        supabase.from('recruiters').select('company_id').eq('user_id', user.id).single(),
         supabase.from('jobs').select('id, title, status, created_at').eq('posted_by', user.id).order('created_at', { ascending: false }),
-        supabase.from('applications').select('id, status, applied_at, job_id, jobs(title)').order('applied_at', { ascending: false }),
         supabase.from('interviews').select('id', { count: 'exact', head: true }),
       ])
       if (!active) return
+      const companyId = recruiterR.data?.company_id
+      let appsData = []
+      if (companyId) {
+        const { data } = await supabase
+          .from('applications')
+          .select('id, status, applied_at, job_id, jobs(title)')
+          .eq('jobs.company_id', companyId)
+          .order('applied_at', { ascending: false })
+        appsData = data ?? []
+      }
       setJobs(jobsR.data ?? [])
-      setApps(appsR.data ?? [])
+      setApps(appsData)
       setInterviewCount(interR.count ?? 0)
       setLoading(false)
     }
@@ -157,7 +167,7 @@ export default function RecruiterDashboardPage() {
           ) : (
             <div className="mt-3 flex flex-col gap-2">
               {apps.slice(0, 5).map((a) => (
-                <div key={a.id} className="card bg-base-100 p-4 shadow-sm">
+                <Link key={a.id} to={`/recruiter/applicants/${a.id}`} className="card bg-base-100 p-4 shadow-sm transition hover:shadow-md">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-medium">{a.jobs?.title ?? 'Job removed'}</div>
@@ -167,7 +177,7 @@ export default function RecruiterDashboardPage() {
                       {APPLICATION_STATUS[a.status] ?? a.status}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

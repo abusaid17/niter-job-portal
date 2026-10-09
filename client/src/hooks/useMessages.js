@@ -13,6 +13,7 @@ export function useConversations() {
   const { session } = useAuth()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const channelRef = useRef(null)
 
   const refresh = useCallback(async () => {
     if (!session) {
@@ -20,7 +21,10 @@ export function useConversations() {
       setLoading(false)
       return
     }
-    const { data } = await supabase.rpc('my_conversations')
+    const { data, error } = await supabase.rpc('my_conversations')
+    if (error) {
+      console.error('[useConversations] refresh error:', error)
+    }
     setItems(data ?? [])
     setLoading(false)
   }, [session])
@@ -31,6 +35,13 @@ export function useConversations() {
 
   useEffect(() => {
     if (!session) return undefined
+
+    // Clean up existing channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current)
+      channelRef.current = null
+    }
+
     const channel = supabase
       .channel(freshTopic('conversations-' + session.user.id))
       .on(
@@ -42,9 +53,31 @@ export function useConversations() {
         },
         () => refresh(),
       )
-      .subscribe()
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversation_members',
+          filter: `user_id=eq.${session.user.id}`,
+        },
+        () => refresh(),
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('[useConversations] Realtime subscribed')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[useConversations] Realtime channel error')
+        }
+      })
+
+    channelRef.current = channel
+
     return () => {
-      supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [session, refresh])
 
@@ -60,6 +93,7 @@ export function useMessageThread(conversationId) {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
   const idRef = useRef(conversationId)
+  const hasMarkedReadRef = useRef(false)
 
   useEffect(() => {
     idRef.current = conversationId
@@ -86,8 +120,10 @@ export function useMessageThread(conversationId) {
     setMessages([])
     setLoading(true)
     setError(null)
+    hasMarkedReadRef.current = false
     load()
-    if (session) {
+    if (session && !hasMarkedReadRef.current) {
+      hasMarkedReadRef.current = true
       supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId })
     }
   }, [conversationId, session, load])
@@ -106,9 +142,8 @@ export function useMessageThread(conversationId) {
         },
         (payload) => {
           setMessages((prev) => [...prev, payload.new])
-          if (session) {
-            supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId })
-          }
+          // Don't call mark_conversation_read here - user is already viewing the thread
+          // The read status was already marked when the thread opened
         },
       )
       .subscribe()

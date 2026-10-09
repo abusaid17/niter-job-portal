@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Link, NavLink, Navigate, Outlet, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
@@ -64,43 +64,53 @@ const ADMIN_NAV = [
   { to: '/admin/reports', label: 'Reports', icon: BarChart3 },
   { to: '/admin/analytics', label: 'Analytics', icon: PieChart },
   { to: '/admin/campus', label: 'Campus Recruitment', icon: GraduationCap },
-  { to: '/messages', label: 'Messages', icon: MessageSquare },
   { to: '/notifications', label: 'Notifications', icon: Bell },
 ]
 
-const MESSAGES_NAV = { to: '/messages', label: 'Messages' }
-const NOTIFICATIONS_NAV = { to: '/notifications', label: 'Notifications' }
-
-function NotificationsBell({ unread, items, markRead, markAllRead }) {
-  const [isOpen, setIsOpen] = useState(false)
-
-  useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (e.currentTarget !== e.target && !e.currentTarget.contains(e.target)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('click', handleOutsideClick)
-    return () => document.removeEventListener('click', handleOutsideClick)
-  }, [])
+function MessagesBell({ unread }) {
+  const displayCount = unread > 99 ? '99+' : unread
 
   return (
-    <div
-      className="relative dropdown dropdown-end"
-      onClick={(e) => e.stopPropagation()}
+    <Link
+      to="/messages"
+      className="btn btn-ghost btn-sm relative"
+      aria-label={`Messages${unread > 0 ? `, ${displayCount} unread` : ''}`}
     >
-      <summary className="btn btn-ghost btn-sm relative">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-        </svg>
-        {unread > 0 && (
-          <span className="badge badge-error badge-sm absolute -right-1 -top-1">{unread}</span>
-        )}
-      </summary>
-      {isOpen && (
-        <ul
-          className="menu z-40 w-80 max-h-96 overflow-y-auto rounded-box bg-base-100 p-2 shadow-lg absolute top-full left-1/2 transform -translate-x-1/2"
-        >
+      <MessageSquare className="h-5 w-5" />
+      {unread > 0 && (
+        <span className="badge badge-primary badge-sm absolute -right-1 -top-1">{displayCount}</span>
+      )}
+    </Link>
+  )
+}
+
+function NotificationsBell({ unread, items, markRead, markAllRead }) {
+  const dropdownRef = useRef(null)
+
+  const handleOutsideClick = useCallback((e) => {
+    if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+      const details = dropdownRef.current.querySelector('details')
+      if (details) details.open = false
+    }
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener('click', handleOutsideClick)
+    return () => document.removeEventListener('click', handleOutsideClick)
+  }, [handleOutsideClick])
+
+  return (
+    <div ref={dropdownRef} className="relative dropdown dropdown-end">
+      <details className="dropdown-trigger">
+        <summary className="btn btn-ghost btn-sm relative">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {unread > 0 && (
+            <span className="badge badge-error badge-sm absolute -right-1 -top-1">{unread}</span>
+          )}
+        </summary>
+        <ul className="dropdown-content menu z-40 w-80 max-h-96 overflow-y-auto rounded-box bg-base-100 p-2 shadow-lg">
           <li className="menu-title">
             <span>Notifications {unread > 0 && `(${unread} unread)`}</span>
           </li>
@@ -138,12 +148,18 @@ function NotificationsBell({ unread, items, markRead, markAllRead }) {
             </li>
           )}
           <li className="border-t border-base-200">
-            <Link to="/notifications" className="text-sm font-medium text-primary">
+            <Link
+              to="/notifications"
+              className="text-sm font-medium text-primary"
+              onClick={(e) => {
+                e.stopPropagation()
+              }}
+            >
               View all notifications
             </Link>
           </li>
         </ul>
-      )}
+      </details>
     </div>
   )
 }
@@ -171,12 +187,7 @@ export function DashboardLayout() {
   }
 
   const nav = NAV[role] ?? []
-  const messagesLabel = unreadMessages > 0 ? `Messages (${unreadMessages})` : 'Messages'
-  const navLinks = [
-    ...nav,
-    { to: MESSAGES_NAV.to, label: messagesLabel },
-    { to: NOTIFICATIONS_NAV.to, label: NOTIFICATIONS_NAV.label },
-  ]
+  const navLinks = [...nav]
 
   if (role === 'ADMIN') {
     return (
@@ -200,6 +211,7 @@ export function DashboardLayout() {
               </Link>
             </div>
             <div className="flex items-center gap-2 px-1">
+              <MessagesBell unread={unreadMessages} />
               <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
             </div>
           </header>
@@ -209,6 +221,7 @@ export function DashboardLayout() {
               {ROLE_LABELS[role]} panel
             </div>
             <div className="flex items-center gap-2 px-2">
+              <MessagesBell unread={unreadMessages} />
               <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
             </div>
           </header>
@@ -251,14 +264,33 @@ export function DashboardLayout() {
                         }`
                       }
                     >
-                      <item.icon className="h-5 w-5 shrink-0" />
+                      {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
                       <span className="truncate">{item.label}</span>
-                      {item.to === '/messages' && unreadMessages > 0 && (
-                        <span className="badge badge-error badge-sm ml-auto">{unreadMessages}</span>
-                      )}
                     </NavLink>
                   </li>
                 ))}
+                <li>
+                  <NavLink
+                    to="/messages"
+                    end
+                    onClick={() => {
+                      if (drawerToggleRef.current) drawerToggleRef.current.checked = false
+                    }}
+                    className={({ isActive }) =>
+                      `relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
+                      }`
+                    }
+                  >
+                    <MessageSquare className="h-5 w-5 shrink-0" />
+                    <span className="truncate">Messages</span>
+                    {unreadMessages > 0 && (
+                      <span className="badge badge-primary badge-sm ml-auto">{unreadMessages > 99 ? '99+' : unreadMessages}</span>
+                    )}
+                  </NavLink>
+                </li>
               </ul>
             </nav>
 
@@ -333,6 +365,7 @@ export function DashboardLayout() {
               ))}
             </ul>
           </details>
+          <MessagesBell unread={unreadMessages} />
           <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
 
           <span className="hidden text-sm font-medium md:block">{profile?.name || session.user.email}</span>

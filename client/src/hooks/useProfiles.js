@@ -69,14 +69,30 @@ export function useRecruiterProfile() {
       setLoading(false)
       return
     }
-    const { data } = await supabase
+    // First, get the recruiter row (always accessible via RLS)
+    const { data: recruiterData, error: recruiterError } = await supabase
       .from('recruiters')
-      .select('*, companies(*)')
+      .select('*')
       .eq('user_id', session.user.id)
       .maybeSingle()
-    if (data) {
-      setRecruiter(data)
-      setCompany(data.companies ?? null)
+
+    if (recruiterError) {
+      console.error('[useRecruiterProfile] recruiter fetch error:', recruiterError)
+    }
+
+    if (recruiterData) {
+      setRecruiter(recruiterData)
+      // Try to fetch the company separately - this handles RLS issues where the join might fail
+      if (recruiterData.company_id) {
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('*')
+          .eq('id', recruiterData.company_id)
+          .maybeSingle()
+        setCompany(companyData ?? null)
+      } else {
+        setCompany(null)
+      }
     } else {
       setRecruiter(null)
       setCompany(null)
@@ -125,6 +141,7 @@ export function useNotifications({ limit = 20 } = {}) {
 
   const userId = session?.user?.id
   const channelRef = useRef(null)
+  const subscribedRef = useRef(false)
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -151,11 +168,18 @@ export function useNotifications({ limit = 20 } = {}) {
   }, [refresh, authLoading])
 
   useEffect(() => {
-    if (!userId || authLoading) return undefined
+    if (!userId || authLoading) return
 
+    // Prevent duplicate subscriptions
+    if (subscribedRef.current && channelRef.current) {
+      return
+    }
+
+    // Clean up existing channel first
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current)
       channelRef.current = null
+      subscribedRef.current = false
     }
 
     const channel = supabase
@@ -186,9 +210,9 @@ export function useNotifications({ limit = 20 } = {}) {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('[useNotifications] Realtime subscribed')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[useNotifications] Realtime channel error')
+          subscribedRef.current = true
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+          subscribedRef.current = false
         }
       })
 
@@ -198,9 +222,10 @@ export function useNotifications({ limit = 20 } = {}) {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current)
         channelRef.current = null
+        subscribedRef.current = false
       }
     }
-  }, [userId, limit, authLoading])
+  }, [userId, authLoading])
 
   async function markAllRead() {
     if (!userId) return

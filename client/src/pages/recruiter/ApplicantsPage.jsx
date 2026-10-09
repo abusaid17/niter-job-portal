@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { APPLICATION_BADGE, APPLICATION_STATUS } from '../../utils/labels'
@@ -28,6 +28,7 @@ const STATUS_COLORS = {
 export default function ApplicantsPage() {
   const { jobId } = useParams()
   const { session, role } = useAuth()
+  const navigate = useNavigate()
   const [job, setJob] = useState(null)
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
@@ -397,6 +398,28 @@ export default function ApplicantsPage() {
                               View CV
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline btn-info"
+                            disabled={busyId === a.id}
+                            onClick={async () => {
+                              const applicantUserId = isAlumni ? a.applicant?.id : a.students?.users?.id
+                              if (!applicantUserId) return
+                              setBusyId(a.id)
+                              setError(null)
+                              const { data, error: e } = await supabase.rpc('start_conversation', {
+                                p_other_user: applicantUserId,
+                              })
+                              setBusyId(null)
+                              if (e) {
+                                setError(e.message)
+                                return
+                              }
+                              navigate(`/messages/${data}`)
+                            }}
+                          >
+                            Message
+                          </button>
                           <Link to={`/recruiter/applicants/${a.id}`} className="btn btn-sm btn-neutral">
                             Review
                           </Link>
