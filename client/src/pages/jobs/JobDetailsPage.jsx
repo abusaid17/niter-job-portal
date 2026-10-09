@@ -35,6 +35,7 @@ export default function JobDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [applyError, setApplyError] = useState(null)
+  const [needsProfile, setNeedsProfile] = useState(false)
   const [applied, setApplied] = useState(false)
   const [cvs, setCvs] = useState([])
   const [reportReason, setReportReason] = useState('')
@@ -116,10 +117,15 @@ export default function JobDetailsPage() {
       payload = { ...payload, applicant_user_id: session.user.id }
     }
     setApplyError(null)
+    setNeedsProfile(false)
     const { error: err } = await supabase.from('applications').insert(payload)
     if (err) {
       if (err.code === '23505') {
         setApplyError('You have already applied to this job.')
+      } else if (/70% complete/i.test(err.message ?? '')) {
+        // Raised by the database trigger trg_applications_guard_completeness.
+        setApplyError('Your profile must be at least 70% complete before you can apply.')
+        setNeedsProfile(true)
       } else {
         setApplyError(err.message)
       }
@@ -274,6 +280,18 @@ export default function JobDetailsPage() {
           {applyError && (
             <div role="alert" className="alert alert-error mt-3 text-sm">
               {applyError}
+            </div>
+          )}
+          {needsProfile && (
+            <div role="alert" className="alert alert-warning mt-3 text-sm">
+              <span>Complete your profile to unlock applying.</span>
+              <Link
+                to={role === 'ALUMNI' ? '/alumni/profile' : '/student/profile'}
+                className="btn btn-sm btn-primary"
+                onClick={() => document.getElementById('apply-modal')?.close()}
+              >
+                Go to my profile
+              </Link>
             </div>
           )}
           {role === 'STUDENT' && !studentProfile && (
