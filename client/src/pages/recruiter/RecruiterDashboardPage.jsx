@@ -107,8 +107,8 @@ export default function RecruiterDashboardPage() {
                   {[company.industry, company.location].filter(Boolean).join(' · ') || '—'}
                 </div>
               </div>
-              <span className="badge badge-lg">
-                {company.verification_status === 'VERIFIED' ? 'badge-success' : 'badge-warning'}
+              <span className={`badge badge-lg ${company.verification_status === 'VERIFIED' ? 'badge-success' : 'badge-warning'}`}>
+                {company.verification_status === 'VERIFIED' ? 'Verified' : 'Pending verification'}
               </span>
             </div>
           </div>
