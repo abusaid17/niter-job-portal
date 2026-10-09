@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { USER_STATUS, USER_STATUS_BADGE } from '../../utils/labels'
 import { ROLE_LABELS } from '../../utils/roles'
 import { formatDateTime } from '../../utils/format'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
+import { startConversation } from '../../hooks/useMessages'
 
 const VALID_ROLES = ['ALL', 'ADMIN', 'STUDENT', 'ALUMNI', 'RECRUITER', 'FACULTY']
 
 export default function AdminUsersPage() {
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { session } = useAuth()
   const [users, setUsers] = useState([])
@@ -24,6 +26,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
   const [recruiters, setRecruiters] = useState({})
+  const [messagingId, setMessagingId] = useState(null)
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -98,6 +101,19 @@ export default function AdminUsersPage() {
     setNotice({ type: 'success', text: `Recruiter ${verified ? 'verified' : 'unverified'}.` })
   }
 
+  async function openMessage(userId, _userName) {
+    setMessagingId(userId)
+    setError(null)
+    try {
+      const conversationId = await startConversation(userId)
+      navigate(`/messages/${conversationId}`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setMessagingId(null)
+    }
+  }
+
   const roles = ['ALL', 'ADMIN', 'STUDENT', 'ALUMNI', 'RECRUITER', 'FACULTY']
   const statuses = ['ALL', 'PENDING', 'ACTIVE', 'SUSPENDED']
 
@@ -165,6 +181,15 @@ export default function AdminUsersPage() {
                   <td className="text-sm text-base-content/70">{formatDateTime(u.created_at)}</td>
                   <td className="text-right">
                     <div className="flex justify-end gap-1">
+                      {u.id !== session?.user?.id && (
+                        <button
+                          className="btn btn-sm btn-outline btn-primary"
+                          disabled={busyId === u.id || messagingId === u.id}
+                          onClick={() => openMessage(u.id, u.name)}
+                        >
+                          {messagingId === u.id ? <span className="loading loading-spinner loading-sm" /> : 'Message'}
+                        </button>
+                      )}
                       {u.role === 'RECRUITER' && (
                         <button
                           className="btn btn-sm btn-outline"

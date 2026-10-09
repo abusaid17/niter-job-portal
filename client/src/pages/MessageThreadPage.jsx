@@ -6,9 +6,16 @@ import { useAuth } from '../hooks/useAuth'
 import { formatDateTime } from '../utils/format'
 import { LoadingScreen } from '../components/ui/LoadingScreen'
 
+const QUICK_TEMPLATES = [
+  {
+    label: 'Profile update needed',
+    body: 'Hi, we noticed your profile needs some updates. Please review and complete the missing information to improve your visibility to recruiters.',
+  },
+]
+
 export default function MessageThreadPage() {
   const { conversationId } = useParams()
-  const { session } = useAuth()
+  const { session, role } = useAuth()
   const { messages, loading, sending, error, send } = useMessageThread(conversationId)
   const [otherName, setOtherName] = useState('')
   const [body, setBody] = useState('')
@@ -31,6 +38,10 @@ export default function MessageThreadPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length])
+
+  function applyTemplate(template) {
+    setBody(template.body)
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -82,24 +93,43 @@ export default function MessageThreadPage() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={submit} className="flex items-end gap-2">
-        <textarea
-          className="textarea textarea-bordered flex-1"
-          rows={2}
-          placeholder="Type a message…"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              submit(e)
-            }
-          }}
-        />
-        <button className="btn btn-primary" disabled={sending || !body.trim()}>
-          {sending && <span className="loading loading-spinner loading-sm" />}
-          Send
-        </button>
+      <form onSubmit={submit} className="flex flex-col gap-2">
+        {role === 'ADMIN' && (
+          <div className="dropdown dropdown-end">
+            <label tabIndex={0} className="btn btn-sm btn-outline btn-ghost">
+              Quick templates
+              <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+            </label>
+            <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-72">
+              {QUICK_TEMPLATES.map((t) => (
+                <li key={t.label}>
+                  <button className="text-sm px-2 py-1" onClick={() => applyTemplate(t)}>
+                    {t.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <textarea
+            className="textarea textarea-bordered flex-1"
+            rows={2}
+            placeholder="Type a message…"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                submit(e)
+              }
+            }}
+          />
+          <button className="btn btn-primary" disabled={sending || !body.trim()}>
+            {sending && <span className="loading loading-spinner loading-sm" />}
+            Send
+          </button>
+        </div>
       </form>
     </div>
   )

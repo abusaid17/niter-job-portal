@@ -47,9 +47,10 @@ export function useConversations() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'messages',
+          filter: `sender_id=neq.${session.user.id}`,
         },
         () => refresh(),
       )
@@ -86,6 +87,12 @@ export function useConversations() {
   return { items, unread, loading, refresh }
 }
 
+export async function startConversation(otherUserId) {
+  const { data, error } = await supabase.rpc('start_conversation', { p_other_user: otherUserId })
+  if (error) throw error
+  return data
+}
+
 export function useMessageThread(conversationId) {
   const { session } = useAuth()
   const [messages, setMessages] = useState([])
@@ -116,6 +123,17 @@ export function useMessageThread(conversationId) {
     setLoading(false)
   }, [])
 
+  const markRead = useCallback(async () => {
+    const id = idRef.current
+    if (!id || !session) return
+    const { data, error: e } = await supabase.rpc('mark_conversation_read', { p_conversation_id: id })
+    if (e) console.error('[useMessageThread] mark_read error:', e)
+    // data is the number of rows updated (0 or 1)
+    if (data === 0) {
+      console.warn('[useMessageThread] mark_conversation_read: no rows updated (RLS may have blocked)')
+    }
+  }, [session])
+
   useEffect(() => {
     setMessages([])
     setLoading(true)
@@ -124,9 +142,9 @@ export function useMessageThread(conversationId) {
     load()
     if (session && !hasMarkedReadRef.current) {
       hasMarkedReadRef.current = true
-      supabase.rpc('mark_conversation_read', { p_conversation_id: conversationId })
+      markRead()
     }
-  }, [conversationId, session, load])
+  }, [conversationId, session, load, markRead])
 
   useEffect(() => {
     if (!conversationId) return undefined
@@ -141,16 +159,19 @@ export function useMessageThread(conversationId) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new])
-          // Don't call mark_conversation_read here - user is already viewing the thread
-          // The read status was already marked when the thread opened
+          const newMsg = payload.new
+          setMessages((prev) => [...prev, newMsg])
+          // If the message is from someone else, mark conversation as read immediately
+          if (newMsg.sender_id !== session?.user?.id) {
+            markRead()
+          }
         },
       )
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [conversationId, session])
+  }, [conversationId, session, markRead])
 
   async function send(body) {
     if (!session || !conversationId || !body?.trim()) return null
