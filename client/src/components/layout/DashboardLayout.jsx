@@ -85,23 +85,23 @@ function MessagesBell({ unread }) {
 }
 
 function NotificationsBell({ unread, items, markRead, markAllRead }) {
-  const dropdownRef = useRef(null)
+  const detailsRef = useRef(null)
 
-  const handleOutsideClick = useCallback((e) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-      const details = dropdownRef.current.querySelector('details')
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Escape') {
+      const details = detailsRef.current
       if (details) details.open = false
     }
   }, [])
 
   useEffect(() => {
-    document.addEventListener('click', handleOutsideClick)
-    return () => document.removeEventListener('click', handleOutsideClick)
-  }, [handleOutsideClick])
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleKeyDown])
 
   return (
-    <div ref={dropdownRef} className="relative dropdown dropdown-end">
-      <details className="dropdown-trigger">
+    <div className="dropdown dropdown-end">
+      <details ref={detailsRef} className="dropdown-trigger">
         <summary className="btn btn-ghost btn-sm relative">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -110,47 +110,79 @@ function NotificationsBell({ unread, items, markRead, markAllRead }) {
             <span className="badge badge-error badge-sm absolute -right-1 -top-1">{unread}</span>
           )}
         </summary>
-        <ul className="dropdown-content menu z-40 w-80 max-h-96 overflow-y-auto rounded-box bg-base-100 p-2 shadow-lg">
-          <li className="menu-title">
-            <span>Notifications {unread > 0 && `(${unread} unread)`}</span>
+        <ul className="dropdown-content menu z-40 w-[22rem] max-w-[calc(100vw-1rem)] overflow-x-hidden max-h-[70vh] overflow-y-auto rounded-box bg-base-100 p-2 shadow-lg">
+          <li className="menu-title flex items-center justify-between px-2 py-1">
+            <span>Notifications</span>
+            {unread > 0 && (
+              <span className="badge badge-primary badge-sm">{unread} unread</span>
+            )}
           </li>
-          {items.length === 0 && (
-            <li className="p-3 text-sm text-base-content/60">No notifications yet.</li>
-          )}
-          {items.map((n) => (
-            <li key={n.id}>
-              <div className={`flex flex-col items-start gap-0.5 ${n.is_read ? '' : 'bg-base-200'}`}>
-                <span className="text-sm font-medium">{n.title}</span>
-                {n.message && <span className="text-xs text-base-content/70">{n.message}</span>}
-                <span className="text-xs text-base-content/40">{formatDateTime(n.created_at)}</span>
-                {!n.is_read && (
-                  <button
-                    className="btn btn-xs btn-ghost btn-primary mt-1"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      markRead(n.id)
-                    }}
-                  >
-                    Mark read
-                  </button>
-                )}
-              </div>
-            </li>
-          ))}
-          {unread > 0 && (
-            <li className="border-t border-base-200 p-2">
+          <li className="px-2 py-1 border-b border-base-200 flex items-center justify-between">
+            {unread > 0 && (
               <button
-                className="btn btn-sm btn-outline w-full"
-                onClick={markAllRead}
+                className="btn btn-xs btn-ghost btn-primary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  markAllRead()
+                }}
               >
                 Mark all as read
               </button>
-            </li>
+            )}
+          </li>
+          {items.length === 0 ? (
+            <li className="p-4 text-center text-sm text-base-content/60">You&apos;re all caught up</li>
+          ) : (
+            items.map((n) => (
+              <li key={n.id} className="py-2">
+                <button
+                  className={`w-full text-left flex items-start gap-3 p-2 rounded-lg transition ${!n.is_read ? 'bg-base-200' : 'hover:bg-base-200'}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    if (!n.is_read) markRead(n.id)
+                    const details = detailsRef.current
+                    if (details) details.open = false
+                  }}
+                >
+                  {!n.is_read && (
+                    <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className={`font-medium text-sm ${!n.is_read ? 'font-semibold' : ''} break-words`}>
+                        {n.title}
+                      </span>
+                      <span className="text-xs text-base-content/40 whitespace-nowrap shrink-0">
+                        {formatDateTime(n.created_at)}
+                      </span>
+                    </div>
+                    {n.message && (
+                      <span className="text-xs text-base-content/70 line-clamp-3 break-words block mt-0.5">
+                        {n.message}
+                      </span>
+                    )}
+                  </div>
+                  {!n.is_read && (
+                    <button
+                      className="btn btn-xs btn-ghost btn-primary mt-1 shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        markRead(n.id)
+                      }}
+                    >
+                      Mark read
+                    </button>
+                  )}
+                </button>
+              </li>
+            ))
           )}
-          <li className="border-t border-base-200">
+          <li className="border-t border-base-200 pt-2">
             <Link
               to="/notifications"
-              className="text-sm font-medium text-primary"
+              className="btn btn-sm btn-block btn-ghost justify-start"
               onClick={(e) => {
                 e.stopPropagation()
               }}
