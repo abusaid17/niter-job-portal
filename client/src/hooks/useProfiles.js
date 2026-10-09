@@ -142,6 +142,7 @@ export function useNotifications({ limit = 20 } = {}) {
   const userId = session?.user?.id
   const channelRef = useRef(null)
   const subscribedRef = useRef(false)
+  const channelNameRef = useRef(null)
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -182,8 +183,12 @@ export function useNotifications({ limit = 20 } = {}) {
       subscribedRef.current = false
     }
 
+    const uniqueSuffix = crypto.randomUUID()
+    const channelName = `notifications:${userId}:${uniqueSuffix}`
+    channelNameRef.current = channelName
+
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
