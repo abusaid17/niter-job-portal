@@ -7,18 +7,98 @@ import { APPLICATION_BADGE, APPLICATION_STATUS, JOB_STATUS, JOB_STATUS_BADGE } f
 import { formatDate } from '../../utils/format'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
 import { DashboardLists } from '../../components/recruiter/DashboardLists'
+import {
+  PlusIcon,
+  Building2Icon,
+  BriefcaseIcon,
+  UsersIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  MapPinIcon,
+  LinkIcon,
+  ChevronRightIcon,
+  EditIcon,
+  SearchIcon,
+  FilterIcon,
+  BriefcaseIcon as JobIcon,
+  UserIcon,
+  EyeIcon,
+  PencilIcon,
+  ExternalLinkIcon,
+  MoreHorizontalIcon,
+} from 'lucide-react'
+
+const STAT_ICONS = {
+  open: BriefcaseIcon,
+  applicants: UsersIcon,
+  shortlisted: CheckCircleIcon,
+  interviews: CalendarIcon,
+  closed: XCircleIcon,
+}
+
+const STAT_COLORS = {
+  open: 'bg-primary/10 text-primary',
+  applicants: 'bg-info/10 text-info',
+  shortlisted: 'bg-success/10 text-success',
+  interviews: 'bg-warning/10 text-warning',
+  closed: 'bg-error/10 text-error',
+}
 
 const OPEN_STATUSES = ['DRAFT', 'PENDING_APPROVAL', 'PUBLISHED']
-const TABS = ['ALL', 'DRAFT', 'PENDING_APPROVAL', 'PUBLISHED', 'CLOSED']
+const TABS = [
+  { key: 'ALL', label: 'All', icon: null },
+  { key: 'DRAFT', label: 'Draft', icon: null },
+  { key: 'PENDING_APPROVAL', label: 'Pending Approval', icon: null },
+  { key: 'PUBLISHED', label: 'Published', icon: null },
+  { key: 'CLOSED', label: 'Closed', icon: null },
+]
 
-function StatTile({ label, value, to }) {
+function StatTile({ label, value, to, statKey }) {
+  const Icon = STAT_ICONS[statKey] || BriefcaseIcon
+  const colorClass = STAT_COLORS[statKey] || 'bg-primary/10 text-primary'
   const inner = (
-    <div className="card bg-base-100 p-5 text-center shadow-sm transition hover:shadow-md">
-      <div className="text-4xl font-extrabold text-primary">{value}</div>
-      <div className="mt-1 text-sm text-base-content/70">{label}</div>
+    <div className="card bg-base-100 p-5 shadow-sm hover:shadow-lg transition-shadow rounded-2xl border border-base-200">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-3xl font-extrabold text-base-content">{value}</div>
+          <div className="mt-1 text-sm text-base-content/70">{label}</div>
+        </div>
+        <div className={`${colorClass} p-3 rounded-xl`}>
+          <Icon className="w-6 h-6" aria-hidden="true" />
+        </div>
+      </div>
     </div>
   )
   return to ? <Link to={to}>{inner}</Link> : inner
+}
+
+function SectionHeader({ title, icon: Icon, count, action }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="w-5 h-5 text-primary" aria-hidden="true" />}
+        <h2 className="text-lg font-bold">{title}</h2>
+        {count !== undefined && <span className="badge badge-primary badge-sm">{count}</span>}
+      </div>
+      {action && (
+        <Link {...action} className="btn btn-sm btn-outline gap-1">
+          View all <ChevronRightIcon className="w-4 h-4" aria-hidden="true" />
+        </Link>
+      )}
+    </div>
+  )
+}
+
+function EmptyState({ message, icon: Icon }) {
+  return (
+    <div className="card bg-base-100 p-8 text-center text-sm text-base-content/60 shadow-sm">
+      {Icon && <Icon className="w-12 h-12 mx-auto mb-3 text-base-content/30" aria-hidden="true" />}
+      <p className="font-medium mb-1">No data yet</p>
+      <p className="text-xs">{message}</p>
+    </div>
+  )
 }
 
 function ConfirmDialog({ open, title, message, onConfirm, onCancel, confirmText = 'Confirm', variant = 'btn-error' }) {
@@ -96,6 +176,12 @@ export default function RecruiterDashboardPage() {
     }
   }, [jobs, apps, interviewCount])
 
+  const tabCounts = useMemo(() => {
+    const counts = { ALL: jobs.length }
+    for (const j of jobs) counts[j.status] = (counts[j.status] ?? 0) + 1
+    return counts
+  }, [jobs])
+
   const filteredJobs = useMemo(() => {
     if (activeTab === 'ALL') return jobs
     return jobs.filter((j) => j.status === activeTab)
@@ -151,145 +237,250 @@ export default function RecruiterDashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">
-            Welcome{user.name ? `, ${user.name.split(' ')[0]}` : ''} 👋
+            Welcome back{user.name ? `, ${user.name.split(' ')[0]}` : ''}
           </h1>
           <p className="mt-1 text-base-content/70">Manage your jobs, applicants, and interviews.</p>
         </div>
-        <Link to="/recruiter/jobs/new" className="btn btn-primary">
+        <Link to="/recruiter/jobs/new" className="btn btn-primary gap-2 w-full sm:w-auto justify-center">
+          <PlusIcon className="w-4 h-4" aria-hidden="true" />
           Post a job
         </Link>
       </div>
 
       {!company ? (
-        <div role="alert" className="alert alert-warning">
-          <span>Set up your company profile to start posting jobs.</span>
-          <Link to="/recruiter/company" className="btn btn-sm btn-primary">
-            Create company profile
-          </Link>
+        <div role="alert" className="alert alert-warning gap-3">
+          <Building2Icon className="w-6 h-6 shrink-0" aria-hidden="true" />
+          <div className="flex-1">
+            <p className="font-medium">Set up your company profile to start posting jobs.</p>
+            <Link to="/recruiter/company" className="btn btn-sm btn-primary mt-2">
+              Create company profile
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="card bg-base-100 shadow-sm">
+        <div className="card bg-base-100 shadow-sm border border-base-200">
           <div className="card-body">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="card-title">{company.name}</div>
-                <div className="text-sm text-base-content/70">
-                  {[company.industry, company.location].filter(Boolean).join(' · ') || '—'}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="avatar w-16 h-16 bg-primary/10 text-primary rounded-full">
+                  <span className="text-2xl font-bold">
+                    {company.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <div className="card-title font-bold text-xl">{company.name}</div>
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-base-content/70">
+                    {company.industry && (
+                      <span className="flex items-center gap-1">
+                        <BriefcaseIcon className="w-4 h-4" aria-hidden="true" />
+                        {company.industry}
+                      </span>
+                    )}
+                    {company.location && (
+                      <span className="flex items-center gap-1">
+                        <MapPinIcon className="w-4 h-4" aria-hidden="true" />
+                        {company.location}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <span className={`badge badge-lg ${company.verification_status === 'VERIFIED' ? 'badge-success' : 'badge-warning'}`}>
-                {company.verification_status === 'VERIFIED' ? 'Verified' : 'Pending verification'}
-              </span>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+                <span className={`badge badge-lg gap-2 ${company.verification_status === 'VERIFIED' ? 'badge-success' : 'badge-warning'}`}>
+                  {company.verification_status === 'VERIFIED' ? (
+                    <>
+                      <CheckCircleIcon className="w-4 h-4" aria-hidden="true" />
+                      Verified
+                    </>
+                  ) : (
+                    <>
+                      <ClockIcon className="w-4 h-4" aria-hidden="true" />
+                      Pending verification
+                    </>
+                  )}
+                </span>
+                <Link
+                  to="/recruiter/company"
+                  className="btn btn-sm btn-outline gap-2 justify-center w-full sm:w-auto"
+                  aria-label="Edit company profile"
+                >
+                  <EditIcon className="w-4 h-4" aria-hidden="true" />
+                  Edit company
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-        <StatTile label="Open jobs" value={loading ? '…' : stats.open} to="/recruiter/jobs" />
-        <StatTile label="Total applicants" value={loading ? '…' : stats.applicants} to="/recruiter/jobs" />
-        <StatTile label="Shortlisted" value={loading ? '…' : stats.shortlisted} />
-        <StatTile label="Interviews" value={loading ? '…' : stats.interviews} />
-        <StatTile label="Closed jobs" value={loading ? '…' : stats.closed} />
+        <StatTile label="Open jobs" value={loading ? '…' : stats.open} to="/recruiter/jobs" statKey="open" />
+        <StatTile label="Total applicants" value={loading ? '…' : stats.applicants} to="/recruiter/jobs" statKey="applicants" />
+        <StatTile label="Shortlisted" value={loading ? '…' : stats.shortlisted} statKey="shortlisted" />
+        <StatTile label="Interviews" value={loading ? '…' : stats.interviews} statKey="interviews" />
+        <StatTile label="Closed jobs" value={loading ? '…' : stats.closed} statKey="closed" />
       </div>
 
       {jobs.length > 0 && <DashboardLists jobIds={jobs.map((j) => j.id)} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">My jobs</h2>
-            <Link to="/recruiter/jobs" className="link link-primary text-sm">
-              Manage jobs
-            </Link>
-          </div>
-          <div className="flex flex-wrap gap-1 mt-2 mb-3" role="tablist">
-            {TABS.map((tab) => (
-              <button
-                key={tab}
-                role="tab"
-                aria-selected={activeTab === tab}
-                className={`btn btn-sm ${activeTab === tab ? 'btn-primary' : 'btn-outline'}`}
-                onClick={() => setActiveTab(tab)}
-              >
-                {tab === 'PENDING_APPROVAL' ? 'Pending approval' : tab}
-              </button>
-            ))}
-          </div>
-          {loading ? (
-            <div className="mt-4 flex justify-center">
-              <span className="loading loading-spinner loading-lg text-primary" />
-            </div>
-          ) : filteredJobs.length === 0 ? (
-            <div className="card mt-3 bg-base-100 p-6 text-center text-sm text-base-content/60 shadow-sm">
-              No jobs in this category.
-            </div>
-          ) : (
-            <div className="mt-3 flex flex-col gap-2">
-              {filteredJobs.slice(0, 5).map((j) => (
-                <div key={j.id} className="card bg-base-100 p-4 shadow-sm transition hover:shadow-md">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="font-medium">{j.title}</div>
-                      <div className="text-xs text-base-content/60">{formatDate(j.created_at)}</div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`badge badge-sm ${JOB_STATUS_BADGE[j.status] ?? 'badge-ghost'}`}>
-                        {JOB_STATUS[j.status] ?? j.status}
-                      </span>
-                      {j.status === 'PUBLISHED' && (
-                        <button
-                          className="btn btn-sm btn-outline btn-error"
-                          disabled={busyId === j.id}
-                          onClick={() => handleConfirmAction(j, 'close')}
-                        >
-                          {busyId === j.id ? <span className="loading loading-spinner loading-sm" /> : 'Close'}
-                        </button>
-                      )}
-                      {j.status === 'CLOSED' && (
-                        <button
-                          className="btn btn-sm btn-outline btn-success"
-                          disabled={busyId === j.id}
-                          onClick={() => handleConfirmAction(j, 'reopen')}
-                        >
-                          {busyId === j.id ? <span className="loading loading-spinner loading-sm" /> : 'Reopen'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <h2 className="text-lg font-bold">Recent applicants</h2>
-          {apps.length === 0 ? (
-            <div className="card mt-3 bg-base-100 p-6 text-center text-sm text-base-content/60 shadow-sm">
-              No applications yet. Share your jobs with students to attract talent.
-            </div>
-          ) : (
-            <div className="mt-3 flex flex-col gap-2">
-              {apps.slice(0, 5).map((a) => (
-                <Link key={a.id} to={`/recruiter/applicants/${a.id}`} className="card bg-base-100 p-4 shadow-sm transition hover:shadow-md">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium">{a.jobs?.title ?? 'Job removed'}</div>
-                      <div className="text-xs text-base-content/60">Applied {formatDate(a.applied_at)}</div>
-                    </div>
-                    <span className={`badge badge-sm ${APPLICATION_BADGE[a.status] ?? 'badge-ghost'}`}>
-                      {APPLICATION_STATUS[a.status] ?? a.status}
+        <section className="card bg-base-100 border border-base-200 shadow-sm">
+          <div className="card-body p-0 pt-4 pb-4">
+            <SectionHeader
+              title="My jobs"
+              icon={JobIcon}
+              count={jobs.length}
+              action={{ to: '/recruiter/jobs', className: 'px-4' }}
+            />
+            <div className="px-4">
+              <div className="flex flex-wrap gap-2 mb-3" role="tablist">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.key}
+                    role="tab"
+                    aria-selected={activeTab === tab.key}
+                    className={`btn btn-sm ${activeTab === tab.key ? 'btn-primary' : 'btn-outline'} gap-1.5 px-3 py-1.5 whitespace-nowrap`}
+                    onClick={() => setActiveTab(tab.key)}
+                  >
+                    {tab.label}
+                    <span className={`badge badge-sm ${activeTab === tab.key ? 'badge-primary' : 'badge-ghost'}`}>
+                      {tabCounts[tab.key] ?? 0}
                     </span>
-                  </div>
-                </Link>
-              ))}
+                  </button>
+                ))}
+              </div>
+              {loading ? (
+                <div className="flex justify-center py-4">
+                  <span className="loading loading-spinner loading-lg text-primary" />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {filteredJobs.slice(0, 5).map((j) => {
+                    const applicantCount = apps.filter((a) => a.job_id === j.id).length
+                    const statusBadge = JOB_STATUS_BADGE[j.status] ?? 'badge-ghost'
+                    const statusLabel = JOB_STATUS[j.status] ?? j.status
+                    const isPublished = j.status === 'PUBLISHED'
+                    const isClosed = j.status === 'CLOSED'
+                    return (
+                      <article
+                        key={j.id}
+                        className="card bg-base-100 border border-base-200 shadow-sm hover:shadow-lg transition-shadow duration-200"
+                      >
+                        <div className="card-body p-4">
+                          {/* Row 1: Title + Status */}
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                            <h3 className="font-semibold text-base-content break-words sm:pr-4 flex-1 min-w-0">{j.title}</h3>
+                            <span className={`badge badge-md ${statusBadge} whitespace-nowrap shrink-0`}>
+                              {statusLabel}
+                            </span>
+                          </div>
+
+                          {/* Row 2: Posted date + Applicant count */}
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-base-content/60 mb-3">
+                            <span className="flex items-center gap-1.5 badge badge-sm badge-outline">
+                              <CalendarIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                              Posted {formatDate(j.created_at)}
+                            </span>
+                            <span className="flex items-center gap-1.5 badge badge-sm badge-outline">
+                              <UserIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                              {applicantCount} applicant{applicantCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+
+                          {/* Row 3: Actions */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              to={`/recruiter/jobs/${j.id}/applicants`}
+                              className="btn btn-sm btn-neutral gap-1.5 px-3 min-w-[100px] justify-center"
+                              aria-label={`View applicants for ${j.title}`}
+                            >
+                              <UserIcon className="w-4 h-4" aria-hidden="true" />
+                              <span className="hidden sm:inline">Applicants</span>
+                            </Link>
+                            <Link
+                              to={`/recruiter/jobs/${j.id}/edit`}
+                              className="btn btn-sm btn-outline gap-1.5 px-3 min-w-[80px] justify-center"
+                              aria-label={`Edit ${j.title}`}
+                            >
+                              <PencilIcon className="w-4 h-4" aria-hidden="true" />
+                              <span className="hidden sm:inline">Edit</span>
+                            </Link>
+                            {isPublished && (
+                              <button
+                                className="btn btn-sm btn-outline btn-error gap-1.5 px-3 min-w-[80px] justify-center"
+                                disabled={busyId === j.id}
+                                onClick={() => handleConfirmAction(j, 'close')}
+                                aria-label={`Close ${j.title}`}
+                              >
+                                <XCircleIcon className="w-4 h-4" aria-hidden="true" />
+                                <span className="hidden sm:inline">Close</span>
+                                {busyId === j.id && <span className="loading loading-spinner loading-sm" />}
+                              </button>
+                            )}
+                            {isClosed && (
+                              <button
+                                className="btn btn-sm btn-outline btn-success gap-1.5 px-3 min-w-[80px] justify-center"
+                                disabled={busyId === j.id}
+                                onClick={() => handleConfirmAction(j, 'reopen')}
+                                aria-label={`Reopen ${j.title}`}
+                              >
+                                <CheckCircleIcon className="w-4 h-4" aria-hidden="true" />
+                                <span className="hidden sm:inline">Reopen</span>
+                                {busyId === j.id && <span className="loading loading-spinner loading-sm" />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </section>
+
+        <section className="card bg-base-100 border border-base-200 shadow-sm">
+          <div className="card-body p-0 pt-4 pb-4">
+            <SectionHeader
+              title="Recent applicants"
+              icon={UserIcon}
+              count={apps.length}
+              action={{ to: '/recruiter/jobs', className: 'px-4' }}
+            />
+            <div className="px-4">
+              {apps.length === 0 ? (
+                <EmptyState message="Share your jobs with students to attract talent and receive applications." icon={UserIcon} />
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {apps.slice(0, 5).map((a) => (
+                    <Link
+                      key={a.id}
+                      to={`/recruiter/applicants/${a.id}`}
+                      className="card bg-base-100 p-3 shadow-sm border border-base-200 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium truncate">{a.jobs?.title ?? 'Job removed'}</span>
+                            <span className={`badge badge-sm ${APPLICATION_BADGE[a.status] ?? 'badge-ghost'}`}>
+                              {APPLICATION_STATUS[a.status] ?? a.status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-base-content/60 mt-1">Applied {formatDate(a.applied_at)}</div>
+                        </div>
+                        <EyeIcon className="w-5 h-5 text-base-content/40" aria-hidden="true" />
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   )

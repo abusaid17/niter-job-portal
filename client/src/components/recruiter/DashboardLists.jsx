@@ -5,6 +5,16 @@ import { useAuth } from '../../hooks/useAuth'
 import { formatDate, todayISO } from '../../utils/format'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
 import InterviewModal from '../../components/interviews/InterviewModal'
+import {
+  TargetIcon,
+  CalendarIcon,
+  UserIcon,
+  ClockIcon,
+  MapPinIcon,
+  LinkIcon,
+  ChevronRightIcon,
+  PlusIcon,
+} from 'lucide-react'
 
 function InitialsAvatar({ name, className = '' }) {
   const initials = name
@@ -55,13 +65,52 @@ function ErrorState({ message, onRetry }) {
   )
 }
 
-function EmptyState({ message, icon }) {
+function SectionHeader({ title, icon: Icon, count, action }) {
   return (
-    <div className="card bg-base-100 p-8 text-center text-sm text-base-content/60 shadow-sm">
-      {icon && <span className="text-4xl block mb-2">{icon}</span>}
-      <p>{message}</p>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="w-5 h-5 text-primary" aria-hidden="true" />}
+        <h2 className="text-lg font-bold">{title}</h2>
+        {count !== undefined && <span className="badge badge-primary badge-sm">{count}</span>}
+      </div>
+      {action && (
+        <Link {...action} className="btn btn-sm btn-outline gap-1">
+          View all <ChevronRightIcon className="w-4 h-4" aria-hidden="true" />
+        </Link>
+      )}
     </div>
   )
+}
+
+function EmptyState({ message, icon: Icon, action }) {
+  return (
+    <div className="card bg-base-100 p-8 text-center text-sm text-base-content/60 shadow-sm">
+      {Icon && <Icon className="w-12 h-12 mx-auto mb-3 text-base-content/30" aria-hidden="true" />}
+      <p className="font-medium mb-1">No data yet</p>
+      <p className="text-xs mb-4">{message}</p>
+      {action && (
+        <Link {...action} className="btn btn-sm btn-primary gap-1">
+          {action.icon} {action.label}
+        </Link>
+      )}
+    </div>
+  )
+}
+
+function DateBadge({ dateStr }) {
+  const date = new Date(dateStr)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  if (date.getTime() === today.getTime()) {
+    return <span className="badge badge-sm badge-primary">Today</span>
+  }
+  if (date.getTime() === tomorrow.getTime()) {
+    return <span className="badge badge-sm badge-info">Tomorrow</span>
+  }
+  return null
 }
 
 export function ShortlistedCandidates({ jobIds }) {
@@ -99,41 +148,70 @@ export function ShortlistedCandidates({ jobIds }) {
     return () => { active = false }
   }, [session, jobIds])
 
-  if (loading) return <SkeletonRow />
+  if (loading) return <div className="flex flex-col gap-3">{[1,2,3].map(i => <SkeletonRow key={i} />)}</div>
   if (error) return <ErrorState message={error} onRetry={() => setError(null)} />
-  if (apps.length === 0) return <EmptyState message="No shortlisted candidates yet." icon="🎯" />
 
   return (
-    <div className="flex flex-col gap-3">
-      {apps.map((app) => {
-        const student = app.students
-        const user = student?.users
-        const name = user?.name ?? 'Applicant'
-        return (
-          <div key={app.id} className="card bg-base-100 p-4 shadow-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <InitialsAvatar name={name} className="w-10 h-10" />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{name}</div>
-                <div className="text-sm text-base-content/60">
-                  {app.jobs?.title} · Applied {formatDate(app.applied_at)}
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link to={`/recruiter/applicants/${app.id}`} className="btn btn-sm btn-neutral">
-                  View profile
-                </Link>
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={() => setInterviewing(app)}
-                >
-                  Schedule interview
-                </button>
-              </div>
+    <section className="card bg-base-100 border border-base-200 shadow-sm">
+      <div className="card-body p-0 pt-4 pb-4">
+        <SectionHeader
+          title="Shortlisted candidates"
+          icon={TargetIcon}
+          count={apps.length}
+          action={{ to: '/recruiter/jobs', className: 'px-4' }}
+        />
+        <div className="px-4">
+          {apps.length === 0 ? (
+            <EmptyState
+              message="Shortlist candidates from your job applications to see them here."
+              icon={TargetIcon}
+              action={{
+                to: '/recruiter/jobs',
+                label: 'View jobs',
+                icon: <PlusIcon className="w-3.5 h-3.5" aria-hidden="true" />,
+              }}
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {apps.map((app) => {
+                const student = app.students
+                const user = student?.users
+                const name = user?.name ?? 'Applicant'
+                return (
+                  <div key={app.id} className="card bg-base-100 p-3 shadow-sm border border-base-200 hover:shadow-md transition-shadow">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <InitialsAvatar name={name} className="w-10 h-10" />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{name}</div>
+                        <div className="flex items-center gap-2 text-sm text-base-content/60 flex-wrap">
+                          <span>{app.jobs?.title}</span>
+                          <span className="badge badge-sm badge-outline">Applied {formatDate(app.applied_at)}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          to={`/recruiter/applicants/${app.id}`}
+                          className="btn btn-sm btn-neutral gap-1 min-w-[120px] justify-center"
+                        >
+                          <UserIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                          View profile
+                        </Link>
+                        <button
+                          className="btn btn-sm btn-primary gap-1 min-w-[120px] justify-center"
+                          onClick={() => setInterviewing(app)}
+                        >
+                          <PlusIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                          Schedule
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </div>
-        )
-      })}
+          )}
+        </div>
+      </div>
       <InterviewModal
         open={Boolean(interviewing)}
         application={interviewing}
@@ -146,7 +224,7 @@ export function ShortlistedCandidates({ jobIds }) {
           )
         }}
       />
-    </div>
+    </section>
   )
 }
 
@@ -194,65 +272,94 @@ export function UpcomingInterviews({ jobIds }) {
     return () => { active = false }
   }, [session, jobIds])
 
-  if (loading) return <SkeletonRow />
+  if (loading) return <div className="flex flex-col gap-3">{[1,2,3].map(i => <SkeletonRow key={i} />)}</div>
   if (error) return <ErrorState message={error} onRetry={() => setError(null)} />
-  if (interviews.length === 0) return <EmptyState message="No upcoming interviews." icon="📅" />
 
   return (
-    <div className="flex flex-col gap-3">
-      {interviews.map((interview) => {
-        const app = interview.applications
-        const student = app?.students
-        const user = student?.users
-        const name = user?.name ?? 'Candidate'
-        const isOnline = interview.meeting_link && !interview.venue
-        return (
-          <div key={interview.id} className="card bg-base-100 p-4 shadow-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              <InitialsAvatar name={name} className="w-10 h-10" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium truncate">{name}</span>
-                  <span className="badge badge-sm badge-primary">Scheduled</span>
-                </div>
-                <div className="text-sm text-base-content/60">{app?.jobs?.title}</div>
-                <div className="mt-1 flex flex-wrap gap-3 text-sm text-base-content/60">
-                  <span><strong>Date:</strong> {formatDate(interview.interview_date)}</span>
-                  <span><strong>Time:</strong> {interview.start_time?.slice(0, 5)}{interview.end_time ? ` – ${interview.end_time.slice(0, 5)}` : ''}</span>
-                  {isOnline ? (
-                    <span className="flex items-center gap-1">
-                      <strong>Online:</strong>
-                      {interview.meeting_link && (
-                        <a href={interview.meeting_link} target="_blank" rel="noreferrer noopener" className="link link-primary">Join</a>
-                      )}
-                    </span>
-                  ) : interview.venue ? (
-                    <span><strong>Venue:</strong> {interview.venue}</span>
-                  ) : null}
-                </div>
-              </div>
-              <Link to={`/recruiter/applicants/${app?.id}`} className="btn btn-sm btn-neutral">
-                View profile
-              </Link>
+    <section className="card bg-base-100 border border-base-200 shadow-sm">
+      <div className="card-body p-0 pt-4 pb-4">
+        <SectionHeader
+          title="Upcoming interviews"
+          icon={CalendarIcon}
+          count={interviews.length}
+          action={{ to: '/recruiter/jobs', className: 'px-4' }}
+        />
+        <div className="px-4">
+          {interviews.length === 0 ? (
+            <EmptyState
+              message="Schedule interviews with shortlisted candidates to see them here."
+              icon={CalendarIcon}
+              action={{
+                to: '/recruiter/jobs',
+                label: 'View jobs',
+                icon: <PlusIcon className="w-3.5 h-3.5" aria-hidden="true" />,
+              }}
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {interviews.map((interview) => {
+                const app = interview.applications
+                const student = app?.students
+                const user = student?.users
+                const name = user?.name ?? 'Candidate'
+                const isOnline = interview.meeting_link && !interview.venue
+                return (
+                  <div key={interview.id} className="card bg-base-100 p-3 shadow-sm border border-base-200 hover:shadow-md transition-shadow">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="relative">
+                        <InitialsAvatar name={name} className="w-10 h-10" />
+                        <DateBadge dateStr={interview.interview_date} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium truncate">{name}</span>
+                          <span className="badge badge-sm badge-primary">Scheduled</span>
+                        </div>
+                        <div className="text-sm text-base-content/60 truncate">{app?.jobs?.title}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-base-content/60">
+                          <span className="flex items-center gap-1">
+                            <ClockIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                            {interview.start_time?.slice(0, 5)}{interview.end_time ? ` – ${interview.end_time.slice(0, 5)}` : ''}
+                          </span>
+                          {isOnline ? (
+                            <span className="flex items-center gap-1">
+                              <LinkIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                              {interview.meeting_link && (
+                                <a href={interview.meeting_link} target="_blank" rel="noreferrer noopener" className="link link-primary btn btn-xs btn-ghost p-0 h-auto">Join</a>
+                              )}
+                            </span>
+                          ) : interview.venue ? (
+                            <span className="flex items-center gap-1">
+                              <MapPinIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                              {interview.venue}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <Link
+                        to={`/recruiter/applicants/${app?.id}`}
+                        className="btn btn-sm btn-neutral gap-1 min-w-[120px] justify-center"
+                      >
+                        <UserIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                        View profile
+                      </Link>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          </div>
-        )
-      })}
-    </div>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }
 
 export function DashboardLists({ jobIds }) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <section>
-        <h2 className="text-lg font-bold mb-3">Shortlisted candidates</h2>
-        <ShortlistedCandidates jobIds={jobIds} />
-      </section>
-      <section>
-        <h2 className="text-lg font-bold mb-3">Upcoming interviews</h2>
-        <UpcomingInterviews jobIds={jobIds} />
-      </section>
+      <ShortlistedCandidates jobIds={jobIds} />
+      <UpcomingInterviews jobIds={jobIds} />
     </div>
   )
 }
