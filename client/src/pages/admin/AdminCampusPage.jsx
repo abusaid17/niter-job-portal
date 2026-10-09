@@ -77,7 +77,7 @@ export default function AdminCampusPage() {
 
                   <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
                     {e.department && <span className="badge badge-outline">Dept: {e.department}</span>}
-                    {e.batch && <span className="badge badge-outline">Batch: {e.batch}</span>}
+                    {(e.session ?? e.batch) && <span className="badge badge-outline">Session: {e.session ?? e.batch}</span>}
                     {e.min_cgpa != null && <span className="badge badge-outline">CGPA ≥ {Number(e.min_cgpa).toFixed(2)}</span>}
                     {e.graduation_year && <span className="badge badge-outline">Class of {e.graduation_year}</span>}
                     {(e.skills ?? []).length > 0 && (

@@ -46,7 +46,7 @@ export default function FacultyReportsPage() {
     }
     let active = true
     Promise.all([
-      supabase.from('students').select('id, department, batch, cgpa, users(is_verified)').order('id'),
+      supabase.from('students').select('id, department, session, cgpa, users(is_verified)').order('id'),
       supabase.from('placements').select('*, students(department, users(name)), companies(name), jobs(title)').order('offer_date', { ascending: false }).limit(500),
       supabase.from('events').select('id, title, starts_at').order('starts_at', { ascending: false }).limit(200),
       supabase.from('event_registrations').select('id, event_id, status'),

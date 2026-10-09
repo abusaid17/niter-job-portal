@@ -18,7 +18,7 @@ export default function FacultyStudentsPage() {
     let active = true
     supabase
       .from('students')
-      .select('id, student_id, department, batch, semester, cgpa, users(id, name, email, is_verified)')
+      .select('id, student_id, department, session, semester, cgpa, users(id, name, email, is_verified)')
       .order('id')
       .then(({ data }) => {
         if (active) {
@@ -123,7 +123,7 @@ export default function FacultyStudentsPage() {
                     <div className="text-xs text-base-content/60">{s.student_id ?? ''} · {s.users?.email}</div>
                   </td>
                   <td className="text-sm text-base-content/70">
-                    {[s.department, s.batch].filter(Boolean).join(' · ') || '—'}
+                    {[s.department, s.session].filter(Boolean).join(' · ') || '—'}
                   </td>
                   <td className="text-sm">{s.cgpa != null ? Number(s.cgpa).toFixed(2) : '—'}</td>
                   <td>

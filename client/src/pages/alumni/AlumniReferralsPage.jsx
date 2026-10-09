@@ -29,7 +29,7 @@ export default function AlumniReferralsPage() {
           .order('created_at', { ascending: false })
           .limit(100),
         supabase.from('jobs').select('id, title, companies(name)').eq('status', 'PUBLISHED').order('created_at', { ascending: false }).limit(200),
-        supabase.from('students').select('id, department, batch, users(id, name, email)').limit(500),
+        supabase.from('students').select('id, department, session, users(id, name, email)').limit(500),
       ])
       if (!active) return
       setReferrals(refR.data ?? [])
@@ -152,7 +152,7 @@ export default function AlumniReferralsPage() {
                 <option value="">Select a student…</option>
                 {sortedStudents.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.users?.name ?? 'Unknown'} — {[s.department, s.batch].filter(Boolean).join(' · ') || 'Student'}
+                    {s.users?.name ?? 'Unknown'} — {[s.department, s.session].filter(Boolean).join(' · ') || 'Student'}
                   </option>
                 ))}
               </select>

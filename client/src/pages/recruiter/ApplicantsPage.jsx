@@ -56,11 +56,22 @@ export default function ApplicantsPage() {
         supabase.from('jobs').select('title, status').eq('id', jobId).single(),
         supabase
           .from('applications')
-          .select('*, students(id, student_id, department, batch, cgpa, phone, bio, users(id, name, email)), jobs(title), cvs(id, title, file_path), applicant:users!applications_applicant_user_id_fkey(id, name, email)')
+          .select(`
+            *,
+            students!left(id, student_id, department, session, cgpa, phone, bio, users!left(id, name, email)),
+            jobs(title),
+            cvs(id, title, file_path),
+            applicant:users!applications_applicant_user_id_fkey(id, name, email)
+          `)
           .eq('job_id', jobId)
           .order('applied_at', { ascending: false }),
       ])
       if (!active) return
+      if (appsR.error) {
+        setError(appsR.error.message)
+        setLoading(false)
+        return
+      }
       setJob(jobR.data ?? null)
       setApps(appsR.data ?? [])
       setLoading(false)
@@ -268,6 +279,30 @@ export default function ApplicantsPage() {
     return <LoadingScreen />
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <div role="alert" className="alert alert-error max-w-md w-full mx-4">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <svg className="w-12 h-12 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3h13.856z" />
+            </svg>
+            <div>
+              <p className="font-bold text-lg">Failed to load applicants</p>
+              <p className="text-sm text-base-content/70 mt-1">{error}</p>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={() => setError(null)}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -382,7 +417,7 @@ export default function ApplicantsPage() {
                         <div className="mt-0.5 text-sm text-base-content/60">
                           Applied {formatDate(a.applied_at)}
                           {!isAlumni && student?.department && ` · ${student.department}`}
-                          {!isAlumni && student?.batch && ` (Batch ${student.batch})`}
+                          {!isAlumni && student?.session && ` (Session ${student.session})`}
                         </div>
                       </td>
                       <td>

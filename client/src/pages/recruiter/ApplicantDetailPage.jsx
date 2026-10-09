@@ -52,7 +52,7 @@ export default function ApplicantDetailPage() {
     async function load() {
       const appR = await supabase
         .from('applications')
-        .select('*, students(id, student_id, department, batch, semester, cgpa, phone, bio, linkedin_url, github_url, portfolio_url, users(id, name, email)), jobs(id, title), cvs(id, title, file_path), applicant:users!applications_applicant_user_id_fkey(id, name, email)')
+        .select('*, students(id, student_id, department, session, semester, cgpa, phone, bio, linkedin_url, github_url, portfolio_url, users(id, name, email)), jobs(id, title), cvs(id, title, file_path), applicant:users!applications_applicant_user_id_fkey(id, name, email)')
         .eq('id', applicationId)
         .single()
       if (!active) return
@@ -272,7 +272,7 @@ export default function ApplicantDetailPage() {
             <Section title="Academics">
               <div className="flex flex-col gap-1 text-sm">
                 <span>
-                  {[student.department, student.batch].filter(Boolean).join(' · ') || '—'}
+                  {[student.department, student.session].filter(Boolean).join(' · ') || '—'}
                 </span>
                 {student.cgpa != null && <span>CGPA: {Number(student.cgpa).toFixed(2)}</span>}
                 {student.semester && <span>Semester: {student.semester}</span>}

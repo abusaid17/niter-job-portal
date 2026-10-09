@@ -28,7 +28,7 @@ export default function FacultyDashboardPage() {
     if (!session?.user?.id) return
     let active = true
     Promise.all([
-      supabase.from('students').select('id, student_id, department, batch, users(id, name, email, is_verified)').order('id'),
+      supabase.from('students').select('id, student_id, department, session, users(id, name, email, is_verified)').order('id'),
       supabase.from('placements').select('id, offer_date, salary, companies(name), students(id, users(name))').order('offer_date', { ascending: false }).limit(10),
       supabase.from('recommendations').select('*, students(id, users(name)), jobs(title)').eq('faculty_id', user.id).order('created_at', { ascending: false }).limit(5),
       supabase.from('events').select('*').gte('starts_at', new Date().toISOString()).order('starts_at', { ascending: false }).limit(3),

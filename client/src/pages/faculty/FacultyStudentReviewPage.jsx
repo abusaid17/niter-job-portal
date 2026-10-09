@@ -262,7 +262,7 @@ export default function FacultyStudentReviewPage() {
               )}
               {student.department && (
                 <span className="mt-1">
-                  {[student.department, student.batch].filter(Boolean).join(' · ')}
+                  {[student.department, student.session].filter(Boolean).join(' · ')}
                   {student.semester ? ` (${student.semester})` : ''}
                 </span>
               )}
