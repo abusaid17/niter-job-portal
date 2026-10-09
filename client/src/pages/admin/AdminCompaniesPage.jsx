@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { formatDateTime } from '../../utils/format'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
+import { RecruiterProfileModal } from '../../components/admin/RecruiterProfileModal'
 
 const VERIFICATION = { PENDING: 'Pending', VERIFIED: 'Verified', REJECTED: 'Rejected' }
 const VBADGE = { PENDING: 'badge-warning', VERIFIED: 'badge-success', REJECTED: 'badge-error' }
@@ -16,6 +17,7 @@ export default function AdminCompaniesPage() {
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState(null)
   const [notice, setNotice] = useState(null)
+  const [profileCompanyId, setProfileCompanyId] = useState(null)
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -100,6 +102,9 @@ export default function AdminCompaniesPage() {
                   Created by {c.users?.name ?? 'Unknown'} · {formatDateTime(c.created_at)}
                 </div>
                 <div className="card-actions mt-3 justify-end">
+                  <button className="btn btn-sm btn-outline btn-info" onClick={() => setProfileCompanyId(c.id)}>
+                    View Profile
+                  </button>
                   {c.verification_status !== 'VERIFIED' && (
                     <button className="btn btn-sm btn-success" disabled={busyId === c.id} onClick={() => updateVerification(c.id, 'VERIFIED')}>
                       {busyId === c.id ? <span className="loading loading-spinner loading-sm" /> : 'Verify'}
@@ -116,6 +121,20 @@ export default function AdminCompaniesPage() {
           ))}
         </div>
       )}
+
+      <RecruiterProfileModal
+        companyId={profileCompanyId}
+        open={Boolean(profileCompanyId)}
+        onClose={() => setProfileCompanyId(null)}
+        onUpdated={(change) => {
+          if (change.type === 'company') {
+            setCompanies((prev) => prev.map((c) => (c.id === change.companyId ? { ...c, verification_status: change.verification_status } : c)))
+            if (change.verification_status === 'VERIFIED' || change.verification_status === 'REJECTED') {
+              setNotice({ type: 'success', text: `Company ${change.verification_status === 'VERIFIED' ? 'verified' : 'rejected'}.` })
+            }
+          }
+        }}
+      />
     </div>
   )
 }

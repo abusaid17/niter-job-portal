@@ -6,6 +6,7 @@ import { USER_STATUS, USER_STATUS_BADGE } from '../../utils/labels'
 import { ROLE_LABELS } from '../../utils/roles'
 import { formatDateTime } from '../../utils/format'
 import { LoadingScreen } from '../../components/ui/LoadingScreen'
+import { RecruiterProfileModal } from '../../components/admin/RecruiterProfileModal'
 import { startConversation } from '../../hooks/useMessages'
 
 const VALID_ROLES = ['ALL', 'ADMIN', 'STUDENT', 'ALUMNI', 'RECRUITER', 'FACULTY']
@@ -27,6 +28,7 @@ export default function AdminUsersPage() {
   const [notice, setNotice] = useState(null)
   const [recruiters, setRecruiters] = useState({})
   const [messagingId, setMessagingId] = useState(null)
+  const [profileUserId, setProfileUserId] = useState(null)
 
   useEffect(() => {
     if (!session?.user?.id) return
@@ -180,7 +182,15 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="text-sm text-base-content/70">{formatDateTime(u.created_at)}</td>
                   <td className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {u.role === 'RECRUITER' && (
+                        <button
+                          className="btn btn-sm btn-outline btn-info"
+                          onClick={() => setProfileUserId(u.id)}
+                        >
+                          View Profile
+                        </button>
+                      )}
                       {u.id !== session?.user?.id && (
                         <button
                           className="btn btn-sm btn-outline btn-primary"
@@ -221,6 +231,20 @@ export default function AdminUsersPage() {
           </table>
         </div>
       )}
+
+      <RecruiterProfileModal
+        userId={profileUserId}
+        open={Boolean(profileUserId)}
+        onClose={() => setProfileUserId(null)}
+        onUpdated={(change) => {
+          if (change.type === 'recruiter') {
+            setRecruiters((prev) => ({ ...prev, [change.userId]: change.is_verified }))
+          }
+          if (change.type === 'user') {
+            setUsers((prev) => prev.map((u) => (u.id === change.userId ? { ...u, status: change.status } : u)))
+          }
+        }}
+      />
     </div>
   )
 }
