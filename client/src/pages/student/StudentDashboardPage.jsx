@@ -25,6 +25,7 @@ export default function StudentDashboardPage() {
   const [interviews, setInterviews] = useState([])
   const [recommended, setRecommended] = useState([])
   const [counts, setCounts] = useState({ education: 0, skills: 0, experience: 0, projects: 0, cvs: 0 })
+  const [countsError, setCountsError] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const studentId = student?.id
@@ -43,11 +44,11 @@ export default function StudentDashboardPage() {
           .order('applied_at', { ascending: false }),
         supabase.from('interviews').select('id, application_id, interview_date, start_time, end_time, venue, meeting_link, status'),
         supabase.from('jobs').select('*, companies(name)').eq('status', 'PUBLISHED').order('created_at', { ascending: false }).limit(5),
-        supabase.from('education').select('id', { count: 'exact', head: true }),
-        supabase.from('student_skills').select('id', { count: 'exact', head: true }),
-        supabase.from('experience').select('id', { count: 'exact', head: true }),
-        supabase.from('projects').select('id', { count: 'exact', head: true }),
-        supabase.from('cvs').select('id', { count: 'exact', head: true }),
+        supabase.from('education').select('id', { count: 'exact', head: true }).eq('student_id', studentId),
+        supabase.from('student_skills').select('id', { count: 'exact', head: true }).eq('student_id', studentId),
+        supabase.from('experience').select('id', { count: 'exact', head: true }).eq('student_id', studentId),
+        supabase.from('projects').select('id', { count: 'exact', head: true }).eq('student_id', studentId),
+        supabase.from('cvs').select('id', { count: 'exact', head: true }).eq('student_id', studentId),
       ])
       if (!active) return
       setApps(appsR.data ?? [])
@@ -60,6 +61,14 @@ export default function StudentDashboardPage() {
         projects: projR.count ?? 0,
         cvs: cvsR.count ?? 0,
       })
+      const failures = [
+        ['Education', eduR.error],
+        ['Skills', skillsR.error],
+        ['Experience', expR.error],
+        ['Projects', projR.error],
+        ['CV', cvsR.error],
+      ].filter(([, e]) => e)
+      setCountsError(failures.length > 0 ? failures.map(([label, e]) => `${label}: ${e.message}`).join(' · ') : null)
       setLoading(false)
     }
     load()
@@ -89,18 +98,18 @@ export default function StudentDashboardPage() {
 
   const completion = useMemo(() => {
     const checks = [
-      student?.student_id && student?.department,
-      student?.session,
-      student?.phone,
-      student?.bio || student?.github_url || student?.linkedin_url,
-      counts.education > 0,
-      counts.skills > 0,
-      counts.experience > 0,
-      counts.projects > 0,
-      counts.cvs > 0,
+      { label: 'Student ID & department', done: Boolean(student?.student_id && student?.department) },
+      { label: 'Session', done: Boolean(student?.session) },
+      { label: 'Phone number', done: Boolean(student?.phone) },
+      { label: 'Bio or links', done: Boolean(student?.bio || student?.github_url || student?.linkedin_url) },
+      { label: 'Education', done: counts.education > 0 },
+      { label: 'Skills', done: counts.skills > 0 },
+      { label: 'Experience', done: counts.experience > 0 },
+      { label: 'Projects', done: counts.projects > 0 },
+      { label: 'CV', done: counts.cvs > 0 },
     ]
-    const done = checks.filter(Boolean).length
-    return { percent: Math.round((done / checks.length) * 100), done, total: checks.length }
+    const done = checks.filter((c) => c.done).length
+    return { checks, percent: Math.round((done / checks.length) * 100), done, total: checks.length }
   }, [student, counts])
 
   if (profileLoading) {
@@ -149,20 +158,15 @@ export default function StudentDashboardPage() {
             </span>
           </div>
           <progress className="progress progress-primary w-full" value={completion.percent} max="100" />
+          {countsError && !loading && (
+            <div role="alert" className="alert alert-error mt-3 text-xs">
+              <span>Couldn&apos;t verify some sections ({countsError}), so they are shown as incomplete.</span>
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
-            {[
-              'Student ID & department',
-              'Session',
-              'Phone number',
-              'Bio or links',
-              'Education',
-              'Skills',
-              'Experience',
-              'Projects',
-              'CV',
-            ].map((label, i) => (
-              <span key={label} className={`badge badge-sm gap-1 ${student && i <= completion.done - 1 ? 'badge-success' : 'badge-ghost'}`}>
-                {i <= completion.done - 1 ? '✓' : '○'} {label}
+            {completion.checks.map(({ label, done }) => (
+              <span key={label} className={`badge badge-sm gap-1 ${done ? 'badge-success' : 'badge-ghost'}`}>
+                {done ? '✓' : '○'} {label}
               </span>
             ))}
           </div>
