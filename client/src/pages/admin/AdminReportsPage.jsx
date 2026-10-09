@@ -56,6 +56,7 @@ export default function AdminReportsPage() {
   const [stats, setStats] = useState({})
   const [placements, setPlacements] = useState([])
   const [jobReports, setJobReports] = useState([])
+  const [applications, setApplications] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function AdminReportsPage() {
         appsByStatus: apR.data?.reduce((m, a) => { m[a.status] = (m[a.status] ?? 0) + 1; return m }, {}) ?? {},
         avgSalary: valid.length ? valid.reduce((a, p) => a + Number(p.salary), 0) / valid.length : 0,
       })
+      setApplications(apR.data ?? [])
       setPlacements(plR.data ?? [])
       setJobReports(jrR.data ?? [])
       setLoading(false)
