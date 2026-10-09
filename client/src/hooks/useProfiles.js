@@ -143,6 +143,7 @@ export function useNotifications({ limit = 20 } = {}) {
   const channelRef = useRef(null)
   const subscribedRef = useRef(false)
   const channelNameRef = useRef(null)
+  const [loadError, setLoadError] = useState(null)
 
   const refresh = useCallback(async () => {
     if (!userId) {
@@ -158,6 +159,9 @@ export function useNotifications({ limit = 20 } = {}) {
       .limit(limit)
     if (error) {
       console.error('[useNotifications] fetch error:', error.message)
+      setLoadError(error.message)
+    } else {
+      setLoadError(null)
     }
     setItems(data ?? [])
     setLoading(false)
@@ -251,15 +255,63 @@ export function useNotifications({ limit = 20 } = {}) {
     await refresh()
   }
 
-  async function remove(id) {
-    if (!userId) return
-    await supabase.from('notifications').delete().eq('id', id)
+  /**
+   * Delete one notification owned by the current user.
+   * The `.eq('user_id', userId)` guard plus the database RLS policy
+   * ("notifications: delete own", user_id = auth.uid()) together ensure
+   * a user can never delete another user's notification. RLS-blocked
+   * DELETEs succeed silently with zero rows, so deletion is verified
+   * via RETURNING (`select('id')`): on failure the item is restored and
+   * an error is returned instead of a false success.
+   */
+  async function deleteNotification(id) {
+    if (!userId) return { error: 'Not authenticated.' }
+    const snapshot = items
+    setItems((prev) => prev.filter((n) => n.id !== id))
+    const { data, error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id')
+    if (error || !data || data.length === 0) {
+      setItems(snapshot)
+      return { error: error?.message ?? 'Delete was not permitted for this notification.' }
+    }
     await refresh()
+    return { error: null }
+  }
+
+  async function remove(id) {
+    return deleteNotification(id)
+  }
+
+  /**
+   * Delete ALL notifications owned by the current user (read and unread).
+   * Optimistic clear with rollback + RETURNING verification, same as above.
+   */
+  async function clearAll() {
+    if (!userId) return { error: 'Not authenticated.', count: 0 }
+    if (items.length === 0) return { error: null, count: 0 }
+    const snapshot = items
+    setItems([])
+    const { data, error } = await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+      .select('id')
+    const deleted = data?.length ?? 0
+    if (error || (deleted === 0 && snapshot.length > 0)) {
+      setItems(snapshot)
+      return { error: error?.message ?? 'Delete was not permitted.', count: 0 }
+    }
+    await refresh()
+    return { error: null, count: deleted }
   }
 
   const unread = items.filter((n) => !n.is_read).length
 
-  return { items, unread, loading, refresh, markAllRead, markRead, remove }
+  return { items, unread, loading, loadError, refresh, markAllRead, markRead, remove, deleteNotification, clearAll }
 }
 
 export function useStudentSkills() {

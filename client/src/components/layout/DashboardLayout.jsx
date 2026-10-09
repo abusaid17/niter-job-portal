@@ -15,6 +15,7 @@ import {
   MessageSquare,
   PieChart,
   Users,
+  X,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useProfiles'
@@ -84,25 +85,97 @@ function MessagesBell({ unread }) {
   )
 }
 
-function NotificationsBell({ unread, items, markRead, markAllRead }) {
+const LATEST_COUNT = 7
+
+function timeAgo(value) {
+  if (!value) return ''
+  const t = new Date(value).getTime()
+  if (Number.isNaN(t)) return ''
+  const s = Math.max(0, Math.floor((Date.now() - t) / 1000))
+  if (s < 60) return 'Just now'
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  if (d === 1) return 'Yesterday'
+  if (d < 7) return `${d}d ago`
+  return formatDateTime(value)
+}
+
+/** Related page for a notification, or null when there is no confident mapping. */
+function targetFor(n, role) {
+  const hay = `${n?.type ?? ''} ${n?.title ?? ''} ${n?.message ?? ''}`.toLowerCase()
+  if (/(message|chat|conversation)/.test(hay)) return '/messages'
+  if (/(event|workshop|seminar|fair)/.test(hay)) {
+    if (role === 'STUDENT') return '/student/events'
+    if (role === 'FACULTY') return '/faculty/events'
+    return null
+  }
+  if (/(interview)/.test(hay)) {
+    if (role === 'STUDENT') return '/student/interviews'
+    return null
+  }
+  if (/(application|applied|applicant|shortlist|select)/.test(hay)) {
+    if (role === 'STUDENT') return '/student/applications'
+    if (role === 'ALUMNI') return '/alumni/applications'
+    if (role === 'RECRUITER') return '/recruiter/jobs'
+    return null
+  }
+  if (/(job|vacancy|recruit|hire)/.test(hay)) {
+    if (role === 'RECRUITER') return '/recruiter/jobs'
+    if (role === 'STUDENT' || role === 'ALUMNI') return '/jobs'
+    return null
+  }
+  return null
+}
+
+function NotificationsBell({ unread, items, markRead, markAllRead, deleteNotification, clearAll, role }) {
+  const navigate = useNavigate()
+
+  async function onDelete(id, e) {
+    e.stopPropagation()
+    e.preventDefault()
+    await deleteNotification(id)
+  }
+
+  async function onClearAll(e) {
+    e.stopPropagation()
+    e.preventDefault()
+    if (window.confirm("Delete all notifications? This can't be undone.")) {
+      await clearAll()
+    }
+  }
+
   const detailsRef = useRef(null)
+  const wrapRef = useRef(null)
+
+  const close = useCallback(() => {
+    const details = detailsRef.current
+    if (details) details.open = false
+  }, [])
 
   const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Escape') {
-      const details = detailsRef.current
-      if (details) details.open = false
-    }
-  }, [])
+    if (e.key === 'Escape') close()
+  }, [close])
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
+  useEffect(() => {
+    function onPointerDown(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) close()
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    return () => document.removeEventListener('mousedown', onPointerDown)
+  }, [close])
+
   return (
-    <div className="dropdown dropdown-end">
+    <div ref={wrapRef} className="dropdown dropdown-end">
       <details ref={detailsRef} className="dropdown-trigger">
-        <summary className="btn btn-ghost btn-sm relative">
+        <summary className="btn btn-ghost btn-sm relative" aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
@@ -110,15 +183,15 @@ function NotificationsBell({ unread, items, markRead, markAllRead }) {
             <span className="badge badge-error badge-sm absolute -right-1 -top-1">{unread}</span>
           )}
         </summary>
-        <ul className="dropdown-content menu z-40 w-[22rem] max-w-[calc(100vw-1rem)] overflow-x-hidden max-h-[70vh] overflow-y-auto rounded-box bg-base-100 p-2 shadow-lg">
-          <li className="menu-title flex items-center justify-between px-2 py-1">
-            <span>Notifications</span>
+        <div className="dropdown-content z-40 w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-box border border-base-200 bg-base-100 shadow-lg">
+          <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
+            <span className="text-sm font-bold">Notifications</span>
             {unread > 0 && (
               <span className="badge badge-primary badge-sm">{unread} unread</span>
             )}
-          </li>
-          <li className="px-2 py-1 border-b border-base-200 flex items-center justify-between">
-            {unread > 0 && (
+          </div>
+          <div className="mx-3 pb-1.5 border-b border-base-200 flex items-center justify-between min-h-8">
+            {unread > 0 ? (
               <button
                 className="btn btn-xs btn-ghost btn-primary"
                 onClick={(e) => {
@@ -129,68 +202,99 @@ function NotificationsBell({ unread, items, markRead, markAllRead }) {
               >
                 Mark all as read
               </button>
+            ) : <span />}
+            {items.length > 0 && (
+              <button
+                className="btn btn-xs btn-ghost text-error"
+                onClick={onClearAll}
+                aria-label="Delete all notifications"
+              >
+                Clear all
+              </button>
             )}
-          </li>
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto overflow-x-hidden px-2 py-1.5">
           {items.length === 0 ? (
-            <li className="p-4 text-center text-sm text-base-content/60">You&apos;re all caught up</li>
+            <p className="p-4 text-center text-sm text-base-content/60">You&apos;re all caught up</p>
           ) : (
-            items.map((n) => (
-              <li key={n.id} className="py-2">
-                <button
-                  className={`w-full text-left flex items-start gap-3 p-2 rounded-lg transition ${!n.is_read ? 'bg-base-200' : 'hover:bg-base-200'}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    if (!n.is_read) markRead(n.id)
-                    const details = detailsRef.current
-                    if (details) details.open = false
-                  }}
-                >
-                  {!n.is_read && (
-                    <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className={`font-medium text-sm ${!n.is_read ? 'font-semibold' : ''} break-words`}>
-                        {n.title}
-                      </span>
-                      <span className="text-xs text-base-content/40 whitespace-nowrap shrink-0">
-                        {formatDateTime(n.created_at)}
-                      </span>
-                    </div>
-                    {n.message && (
-                      <span className="text-xs text-base-content/70 line-clamp-3 break-words block mt-0.5">
-                        {n.message}
-                      </span>
+            <>
+              {items.length > LATEST_COUNT && (
+                <p className="px-2 pb-1 text-xs text-base-content/50">
+                  Showing latest {LATEST_COUNT} of {items.length}
+                </p>
+              )}
+              {items.slice(0, LATEST_COUNT).map((n) => (
+                <div key={n.id} className="py-1">
+                  <button
+                    className={`group w-full text-left flex items-start gap-2.5 p-2 rounded-lg transition ${!n.is_read ? 'bg-base-200' : 'hover:bg-base-200'}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (!n.is_read) markRead(n.id)
+                      close()
+                      const target = targetFor(n, role)
+                      if (target) navigate(target)
+                    }}
+                  >
+                    {!n.is_read && (
+                      <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" aria-hidden="true" />
                     )}
-                  </div>
-                  {!n.is_read && (
-                    <button
-                      className="btn btn-xs btn-ghost btn-primary mt-1 shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        e.preventDefault()
-                        markRead(n.id)
-                      }}
-                    >
-                      Mark read
-                    </button>
-                  )}
-                </button>
-              </li>
-            ))
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-start justify-between gap-2">
+                        <span className={`text-sm break-words ${!n.is_read ? 'font-bold' : 'font-medium'}`}>
+                          {n.title}
+                        </span>
+                        <span className="text-xs text-base-content/40 whitespace-nowrap shrink-0" title={formatDateTime(n.created_at)}>
+                          {timeAgo(n.created_at)}
+                        </span>
+                      </span>
+                      {n.message && (
+                        <span className="text-xs text-base-content/70 line-clamp-2 break-words block mt-0.5">
+                          {n.message}
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex shrink-0 flex-col items-center">
+                      {!n.is_read && (
+                        <button
+                          className="btn btn-xs btn-ghost btn-primary mt-0.5"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                            markRead(n.id)
+                          }}
+                          aria-label={`Mark notification "${n.title}" as read`}
+                        >
+                          Mark read
+                        </button>
+                      )}
+                      <button
+                        className="btn btn-xs btn-ghost btn-circle text-error mt-0.5 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                        onClick={(e) => onDelete(n.id, e)}
+                        aria-label={`Delete notification: ${n.title}`}
+                        title="Delete notification"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </span>
+                  </button>
+                </div>
+              ))}
+            </>
           )}
-          <li className="border-t border-base-200 pt-2">
+          </div>
+          <div className="border-t border-base-200 p-2">
             <Link
               to="/notifications"
-              className="btn btn-sm btn-block btn-ghost justify-start"
+              className="btn btn-sm btn-block btn-ghost"
               onClick={(e) => {
                 e.stopPropagation()
+                close()
               }}
             >
               View all notifications
             </Link>
-          </li>
-        </ul>
+          </div>
+        </div>
       </details>
     </div>
   )
@@ -198,7 +302,7 @@ function NotificationsBell({ unread, items, markRead, markAllRead }) {
 
 export function DashboardLayout() {
   const { session, profile, role, signOut } = useAuth()
-  const { items, unread, markAllRead, markRead } = useNotifications()
+  const { items, unread, markAllRead, markRead, deleteNotification, clearAll } = useNotifications()
   const { unread: unreadMessages } = useConversations()
   const navigate = useNavigate()
   const [loggingOut, setLoggingOut] = useState(false)
@@ -244,7 +348,7 @@ export function DashboardLayout() {
             </div>
             <div className="flex items-center gap-2 px-1">
               <MessagesBell unread={unreadMessages} />
-              <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
+              <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} deleteNotification={deleteNotification} clearAll={clearAll} role={role} />
             </div>
           </header>
 
@@ -254,7 +358,7 @@ export function DashboardLayout() {
             </div>
             <div className="flex items-center gap-2 px-2">
               <MessagesBell unread={unreadMessages} />
-              <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
+              <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} deleteNotification={deleteNotification} clearAll={clearAll} role={role} />
             </div>
           </header>
 
@@ -398,7 +502,7 @@ export function DashboardLayout() {
             </ul>
           </details>
           <MessagesBell unread={unreadMessages} />
-          <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} />
+          <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} deleteNotification={deleteNotification} clearAll={clearAll} role={role} />
 
           <span className="hidden text-sm font-medium md:block">{profile?.name || session.user.email}</span>
           <button type="button" className="btn btn-sm btn-outline" onClick={onLogout} disabled={loggingOut}>
