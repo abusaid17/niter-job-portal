@@ -116,37 +116,41 @@ The first working version should focus on the complete recruitment workflow.
 
 ## Phase 1 — Must Have
 
-- [ ] Registration/login
-- [ ] JWT-based authentication
-- [ ] Role-based authorization
-- [ ] Student profile
-- [ ] Alumni profile
-- [ ] Recruiter profile
-- [ ] Company profile
-- [ ] Faculty profile
-- [ ] CV upload/update
-- [ ] Job posting
+> Status update (Oct 2026 audit): all items below are Done except Internship posting (posted via job type, no dedicated flow — Open).
+
+- [x] Registration/login
+- [x] JWT-based authentication
+- [x] Role-based authorization
+- [x] Student profile
+- [x] Alumni profile
+- [x] Recruiter profile
+- [x] Company profile
+- [x] Faculty profile
+- [x] CV upload/update
+- [x] Job posting
 - [ ] Internship posting
 - [x] Job search/filter
-- [ ] Job application
-- [ ] Application tracking
-- [ ] Admin approval
-- [ ] Recruiter applicant management
-- [ ] Candidate shortlisting
-- [ ] Interview scheduling
-- [ ] Faculty/student verification
-- [ ] Notifications
-- [ ] Admin dashboard
+- [x] Job application
+- [x] Application tracking
+- [x] Admin approval
+- [x] Recruiter applicant management
+- [x] Candidate shortlisting
+- [x] Interview scheduling
+- [x] Faculty/student verification
+- [x] Notifications
+- [x] Admin dashboard
 
 ## Phase 2 — Strong Features
 
-- [ ] Alumni job posting
-- [ ] Alumni referral
-- [ ] Faculty recommendation
-- [ ] Career events
+> Status update (Oct 2026 audit): all Done. Job matching is basic (skill-match display + recommendations); full AI matching stays in Phase 3.
+
+- [x] Alumni job posting
+- [x] Alumni referral
+- [x] Faculty recommendation
+- [x] Career events
 - [x] Campus recruitment
-- [ ] Job matching
-- [ ] Profile/CV completeness
+- [x] Job matching
+- [x] Profile/CV completeness
 - [x] Job reporting
 - [x] Analytics
 - [x] Employment/placement statistics
@@ -1907,3 +1911,117 @@ Follow this order:
 The most important principle is:
 
 > **Build the complete basic recruitment workflow first. Add advanced features only after the core system is stable.**
+
+---
+
+# 40. Current Status (October 2026 audit — see `docs/AUDIT_REPORT.md`)
+
+| Module | Status | Evidence (one line) |
+| --- | --- | --- |
+| Auth (5 roles, guards) | Done | Login/register/reset + `ProtectedRoute` role checks verified in `client/src/App.jsx`. |
+| Student profile | Done | Full sections, completeness checklist, confirm deletes (`pages/student/StudentProfilePage.jsx`). |
+| Alumni profile | Done | Parity sections on own `alumni_*` tables (`pages/alumni/AlumniProfilePage.jsx`). |
+| Recruiter + company profile | Done | View/edit modes, read-only verification badges (`pages/recruiter/CompanyProfilePage.jsx`). |
+| Faculty verification + recommendation | Done | Verify/unverify + recommend flow (`pages/faculty/FacultyStudentReviewPage.jsx`). |
+| Jobs (post/search/approve) | Done | DRAFT → PENDING_APPROVAL → PUBLISHED for recruiter + alumni (`JobFormPage`, `AdminJobsPage`). |
+| Applications (+70% gate) | Done | DB trigger `trg_applications_guard_completeness` + friendly UI error; withdraw is Open. |
+| Interviews | Done | Schedule modals + reminders edge fn; structured feedback is Open. |
+| Notifications + email | Partial | In-app center/bell/delete/realtime done; reminder cron still has placeholder ref, deliverability unverified. |
+| Messaging | Done | Threads, sender-only delete, unread badges, realtime sync. |
+| Admin (10 pages) | Done | Users/jobs/companies/apps/interviews/events/reports/analytics/campus all working. |
+| Events | Done | Create/manage + student registration with duplicate handling. |
+| Referrals | Done | Alumni referral submit/track flow working. |
+| Analytics | Done | Recharts reports + analytics pages. |
+| Security / RLS | Partial | 34 tables covered, 27 functions with fixed `search_path`; Critical signup-escalation hole open (A-01). |
+| Deployment | Partial | Vercel SPA + Supabase live; no CI/tests, 1.29 MB bundle, cron/bucket/env unverified. |
+
+# 41. Known Issues (from the October 2026 audit — Critical and High only)
+
+| ID | Severity | Title | Affected files | Suggested fix |
+| --- | --- | --- | --- | --- |
+| A-01 | Critical | Signup privilege escalation: `handle_new_user()` casts client-supplied metadata role straight to `user_role`, so anyone can self-register as ADMIN. | `supabase/migrations/20260831000002_rls_policies.sql:28-43` | New migration: allowlist role to STUDENT/ALUMNI/RECRUITER/FACULTY in the trigger. |
+| A-02 | High | Missing indexes on hot FK/filter columns (`cvs`, `education`, `experience`, `projects`, `student_skills`, `event_registrations`, `interviews`, `recommendations`, `referrals`, `alumni_*`). | `supabase/migrations/20260831000001_initial_schema.sql` (indexes section) | New migration adding the missing indexes. |
+| A-03 | High | `uploads` storage bucket not created in any migration — fresh deploys break CV/photo uploads. | `supabase/migrations/` (no `storage.buckets` insert anywhere) | New bucket-seed migration (or documented manual step) + verify RLS. |
+| A-04 | High | No tests and no CI — zero test files, no workflows; broken commits ship silently. | `client/package.json`, repo root (no `.github/`) | Add CI (lint+build); then smoke tests for auth + apply flow. |
+
+# 42. Roadmap
+
+## Next 10 tasks (most valuable first)
+
+- [ ] 1. Signup role allowlist (PA-01) — closes Critical A-01.
+- [ ] 2. CI pipeline: lint + build on every push (PC-01) — stops silent breakage (A-04).
+- [ ] 3. Withdraw application button (PB-01) — High-impact missing student action.
+- [ ] 4. FK index migration (PA-02) — fixes slow profile/applicant queries (A-02).
+- [ ] 5. Route-level code splitting (PC-02) — shrinks the 1.29 MB bundle.
+- [ ] 6. Saved jobs table + UI (PB-02) — top missing student feature.
+- [ ] 7. Seed `uploads` bucket migration (PA-03) — fixes fresh deploys (A-03).
+- [ ] 8. Fix silent admin list failures (PA-04) — error + retry on monitoring pages.
+- [ ] 9. Replace blocking `alert()` calls (PA-05) — inline flash feedback.
+- [ ] 10. Reports CSV export (PB-03) — quick admin win.
+
+## Phase A — Stabilize and secure
+
+| ID | Title | Description | Impact | Effort | Depends on |
+| --- | --- | --- | --- | --- | --- |
+| PA-01 | Signup role allowlist | New migration restricting `handle_new_user()` roles to STUDENT/ALUMNI/RECRUITER/FACULTY. | Critical | S | — |
+| PA-02 | FK index migration | Add missing indexes on profile/applicant FK columns. | High | S | — |
+| PA-03 | Seed `uploads` bucket | Migration (or documented step) creating the bucket + verifying policies. | High | S | — |
+| PA-04 | Admin list error states | Error + retry UI in AdminApplications/AdminInterviews (stop silent empty lists). | Medium | S | — |
+| PA-05 | Replace blocking alerts | Inline flash feedback in RecruiterDashboardPage + MessagesPage. | Medium | S | — |
+| PA-06 | Company dead-end fix | Hide misleading save when unlinked; admin-contact CTA only. | Medium | S | — |
+| PA-07 | Activate reminder cron | Fill project ref, run `cron-setup-production.sql`, confirm `cron.job_run_details`. | Medium | S | — |
+| PA-08 | Verify env + secrets | Confirm Vercel `VITE_*` and Supabase `RESEND_API_KEY`/service keys; verify Resend domain. | Medium | S | — |
+| PA-09 | Decide edge-function fate | Wire up or delete unused `process-approval` / `validate-upload`. | Low | S | — |
+| PA-10 | Policy hygiene | Rename `placements` read policy to match intent; restrict `skills` inserts. | Low | S | — |
+
+## Phase B — Complete core features
+
+Already Done (not tasks): faculty verification, alumni profile parity, event registration, admin analytics, job search/filters, spam reporting.
+
+| ID | Title | Description | Impact | Effort | Depends on |
+| --- | --- | --- | --- | --- | --- |
+| PB-01 | Withdraw application | "Withdraw" button setting WITHDRAWN (RLS already permits). | High | S | — |
+| PB-02 | Saved jobs | `saved_jobs` table + save/unsave UI on job cards/pages. | High | M | PA-02 |
+| PB-03 | Reports CSV export | Download current admin report tables as CSV. | Medium | S | — |
+| PB-04 | Job alerts | Email alerts for saved searches via existing `send-email` fn. | High | M | PB-02, PA-08 |
+| PB-05 | Public company pages | `/companies` list + detail reusing company read paths. | Medium | M | — |
+| PB-06 | Interview feedback | Structured feedback fields on interviews for recruiters. | Medium | M | — |
+| PB-07 | Offer letters | Offer status step on applications after selection. | Medium | M | PB-06 |
+| PB-08 | Notification preferences | Opt-out/granularity toggles checked in notify triggers. | Medium | S | — |
+| PB-09 | Profile photo upload | Storage upload in student profile (CV pattern exists). | Medium | S | PA-03 |
+| PB-10 | Verify-email resend | Resend action on VerifyEmailPage (currently static). | Low | S | PA-08 |
+
+## Phase C — Polish and quality
+
+| ID | Title | Description | Impact | Effort | Depends on |
+| --- | --- | --- | --- | --- | --- |
+| PC-01 | CI pipeline | GitHub workflow running lint + build on push/PR. | High | S | — |
+| PC-02 | Route code splitting | `React.lazy` per route + vendor `manualChunks`. | Medium | S | — |
+| PC-03 | Shared UI kit | Extract Section/Flash/EmptyState/ConfirmDialog/TimeAgo to `components/ui/`. | Medium | M | — |
+| PC-04 | Smoke tests | Auth + apply-flow tests (then unit tests for hooks/utils). | High | M | PC-01 |
+| PC-05 | Dead code cleanup | Remove DashboardPlaceholder, `zustand` dep, dead identifiers, stray console.log. | Low | S | — |
+| PC-06 | Guard cleanup | Single `ProtectedRoute` at layout level instead of double nesting. | Low | S | PC-04 |
+| PC-07 | Error monitoring | Add Sentry (or equivalent) + confirm Supabase PITR backups. | Medium | S | — |
+| PC-08 | Legal + help pages | Terms, Privacy, Help/FAQ routes + first-login checklist. | Low | S-M | — |
+| PC-09 | Landing SEO polish | Meta tags, OG image, sitemap for the public pages. | Low | S | — |
+| PC-10 | Contrast/keyboard pass | Verify color contrast + keyboard flows visually (audit could not). | Low | S | — |
+
+## Phase D — Smart features
+
+| ID | Title | Description | Impact | Effort | Depends on |
+| --- | --- | --- | --- | --- | --- |
+| PD-01 | Job matching upgrade | Score-based recommendations beyond current skill display. | Medium | M | — |
+| PD-02 | CV feedback | Automated suggestions on uploaded CVs. | Medium | L | — |
+| PD-03 | Skill-gap analysis | Missing-skills hints per target role. | Low | M | PD-01 |
+| PD-04 | Bangla language | bn translation + language toggle. | Low | L | — |
+| PD-05 | Dark-mode toggle | User theme switch (themes already configured). | Low | S | — |
+
+# 43. Agent Working Rules (for future coding sessions)
+
+1. One task per session — finish the roadmap item fully before starting the next.
+2. Read the relevant files first; never assume code state from memory or old notes.
+3. Small targeted edits, one section at a time; run `npm run build` after every two edits. If the build fails twice for the same reason, STOP and report the error instead of retrying.
+4. Never use `git checkout`, `git reset`, `git restore` or `git stash` — never revert files.
+5. Database: new migrations only, never edit old ones; run `supabase db push --dry-run` before pushing; use the cloud Supabase project only.
+6. Realtime: no new channels without reusing the shared subscription in the existing hooks.
+7. Definition of done: `npm run lint` and `npm run build` pass, manual test steps are written down, and the change is committed.
