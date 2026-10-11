@@ -753,9 +753,14 @@ export default function CompanyProfilePage() {
               <X className="h-4 w-4" />
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={saving || !company}
+              title={!company ? 'No company is linked to your account yet. Please contact an admin.' : undefined}
+            >
               {saving ? <span className="loading loading-spinner loading-sm" /> : <Save className="h-4 w-4" />}
-              {saving ? 'Saving…' : company ? 'Save Changes' : 'Create Company Profile'}
+              {saving ? 'Saving…' : 'Save Changes'}
             </button>
           </div>
           <p className="flex items-center gap-1.5 text-xs text-base-content/50">
