@@ -2025,3 +2025,32 @@ Already Done (not tasks): faculty verification, alumni profile parity, event reg
 5. Database: new migrations only, never edit old ones; run `supabase db push --dry-run` before pushing; use the cloud Supabase project only.
 6. Realtime: no new channels without reusing the shared subscription in the existing hooks.
 7. Definition of done: `npm run lint` and `npm run build` pass, manual test steps are written down, and the change is committed.
+
+# 44. Current Implementation Plan
+
+Full gap analysis and ordered roadmap: `docs/IMPLEMENTATION_PLAN.md` (executive summary, PASS 1–6, sprints 0–5). Ready-to-paste agent prompts: `docs/AGENT_PROMPTS.md`.
+
+## Sprint 0 — Security and stability
+
+- [ ] S0-01 Signup role allowlist
+- [ ] S0-02 FK index migration
+- [ ] S0-03 Seed uploads bucket
+- [ ] S0-04 CI workflow
+- [ ] S0-05 Silent admin list failures
+- [ ] S0-06 Replace blocking alert()
+- [ ] S0-07 Company dead-end fix
+- [ ] S0-08 Policy hygiene
+- [ ] S0-09 Cron + env correctness
+- [ ] S0-10 Rate limiting baseline
+
+## Sprint 1 — Partial fixes and small missing pieces
+
+- [ ] S1-01 Faculty profile page
+- [ ] S1-02 Application stage tracker
+- [ ] S1-03 Placement creation pipeline
+- [ ] S1-04 Withdraw application
+- [ ] S1-05 Verification-email resend
+- [ ] S1-06 Notification preferences
+- [ ] S1-07 Event check-in
+- [ ] S1-08 Alumni event registration
+- [ ] S1-09 Eligibility drives check
