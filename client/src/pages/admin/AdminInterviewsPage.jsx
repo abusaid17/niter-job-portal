@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { INTERVIEW_STATUS, INTERVIEW_STATUS_BADGE } from '../../utils/labels'
@@ -11,21 +11,31 @@ export default function AdminInterviewsPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [error, setError] = useState(null)
 
-  useEffect(() => {
-    if (!session?.user?.id) return
-    let active = true
-    supabase
+  async function load() {
+    setLoading(true)
+    setError(null)
+    const { data, error: err } = await supabase
       .from('interviews')
       .select('id, interview_date, start_time, end_time, venue, meeting_link, notes, status, created_at, applications(id, students(id, student_id, users(name, email)), jobs(title, companies(name)), users!applicant_user_id(name, email)), users!scheduled_by(name)')
       .order('interview_date', { ascending: false })
-      .then(({ data }) => {
-        if (active) {
-          setInterviews(data ?? [])
-          setLoading(false)
-        }
-      })
-    return () => { active = false }
+    if (!activeRef.current) return
+    if (err) {
+      setError(err.message)
+      setInterviews([])
+    } else {
+      setInterviews(data ?? [])
+    }
+    setLoading(false)
+  }
+
+  const activeRef = useRef(true)
+  useEffect(() => {
+    activeRef.current = true
+    if (!session?.user?.id) return
+    load()
+    return () => { activeRef.current = false }
   }, [session])
 
   const visible = useMemo(() => {
@@ -69,7 +79,16 @@ export default function AdminInterviewsPage() {
         <span className="ml-auto text-sm text-base-content/60">{visible.length} shown</span>
       </div>
 
-      {visible.length === 0 ? (
+      {error && (
+        <div role="alert" className="alert alert-error text-sm">
+          <span>Could not load interviews: {error}</span>
+          <button type="button" className="btn btn-sm btn-outline ml-auto" onClick={load}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {visible.length === 0 && !error ? (
         <div className="card bg-base-100 p-10 text-center text-sm text-base-content/60 shadow-sm">No interviews found.</div>
       ) : (
         <div className="overflow-x-auto rounded-box bg-base-100 shadow-sm">

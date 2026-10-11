@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { APPLICATION_STATUS, APPLICATION_BADGE } from '../../utils/labels'
@@ -11,21 +11,31 @@ export default function AdminApplicationsPage() {
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [error, setError] = useState(null)
 
-  useEffect(() => {
-    if (!session?.user?.id) return
-    let active = true
-    supabase
+  async function load() {
+    setLoading(true)
+    setError(null)
+    const { data, error: err } = await supabase
       .from('applications')
       .select('id, status, applied_at, cover_letter, students(id, student_id, department, users(name, email)), jobs(id, title, companies(name)), users!applicant_user_id(name, email)')
       .order('applied_at', { ascending: false })
-      .then(({ data }) => {
-        if (active) {
-          setApplications(data ?? [])
-          setLoading(false)
-        }
-      })
-    return () => { active = false }
+    if (!activeRef.current) return
+    if (err) {
+      setError(err.message)
+      setApplications([])
+    } else {
+      setApplications(data ?? [])
+    }
+    setLoading(false)
+  }
+
+  const activeRef = useRef(true)
+  useEffect(() => {
+    activeRef.current = true
+    if (!session?.user?.id) return
+    load()
+    return () => { activeRef.current = false }
   }, [session])
 
   const visible = useMemo(() => {
@@ -70,7 +80,16 @@ export default function AdminApplicationsPage() {
         <span className="ml-auto text-sm text-base-content/60">{visible.length} shown</span>
       </div>
 
-      {visible.length === 0 ? (
+      {error && (
+        <div role="alert" className="alert alert-error text-sm">
+          <span>Could not load applications: {error}</span>
+          <button type="button" className="btn btn-sm btn-outline ml-auto" onClick={load}>
+            Retry
+          </button>
+        </div>
+      )}
+
+      {visible.length === 0 && !error ? (
         <div className="card bg-base-100 p-10 text-center text-sm text-base-content/60 shadow-sm">No applications found.</div>
       ) : (
         <div className="overflow-x-auto rounded-box bg-base-100 shadow-sm">
