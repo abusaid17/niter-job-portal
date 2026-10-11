@@ -130,6 +130,7 @@ export default function RecruiterDashboardPage() {
   const [activeTab, setActiveTab] = useState('ALL')
   const [busyId, setBusyId] = useState(null)
   const [confirmDialog, setConfirmDialog] = useState(null)
+  const [actionError, setActionError] = useState(null)
 
   useEffect(() => {
     if (!user?.id) return
@@ -192,8 +193,9 @@ export default function RecruiterDashboardPage() {
     const { error } = await supabase.from('jobs').update({ status: 'CLOSED' }).eq('id', id)
     setBusyId(null)
     if (error) {
-      alert(error.message)
+      setActionError(error.message)
     } else {
+      setActionError(null)
       setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status: 'CLOSED' } : j)))
     }
   }
@@ -203,8 +205,9 @@ export default function RecruiterDashboardPage() {
     const { error } = await supabase.from('jobs').update({ status: 'PUBLISHED' }).eq('id', id)
     setBusyId(null)
     if (error) {
-      alert(error.message)
+      setActionError(error.message)
     } else {
+      setActionError(null)
       setJobs((prev) => prev.map((j) => (j.id === id ? { ...j, status: 'PUBLISHED' } : j)))
     }
   }
@@ -249,6 +252,15 @@ export default function RecruiterDashboardPage() {
           Post a job
         </Link>
       </div>
+
+      {actionError && (
+        <div role="alert" className="alert alert-error text-sm">
+          <span>{actionError}</span>
+          <button type="button" className="btn btn-sm btn-ghost ml-auto" onClick={() => setActionError(null)} aria-label="Dismiss error">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {!company ? (
         <div role="alert" className="alert alert-warning gap-3">

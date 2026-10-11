@@ -18,6 +18,7 @@ export default function MessagesPage() {
   const [users, setUsers] = useState([])
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [messagingId, setMessagingId] = useState(null)
+  const [modalError, setModalError] = useState(null)
 
   const fallback = role === 'RECRUITER' || role === 'ADMIN'
     ? '/recruiter/jobs'
@@ -54,7 +55,7 @@ export default function MessagesPage() {
       navigate(`/messages/${conversationId}`)
     } catch (e) {
       console.error('Start conversation error:', e)
-      alert(e.message)
+      setModalError(e.message)
     } finally {
       setMessagingId(null)
     }
@@ -134,6 +135,14 @@ export default function MessagesPage() {
         <div className="modal modal-open">
           <div className="modal-box max-w-md">
             <h3 className="font-bold text-lg mb-4">New message</h3>
+            {modalError && (
+              <div role="alert" className="alert alert-error text-sm mb-4">
+                <span>{modalError}</span>
+                <button type="button" className="btn btn-sm btn-ghost ml-auto" onClick={() => setModalError(null)} aria-label="Dismiss error">
+                  Dismiss
+                </button>
+              </div>
+            )}
             <input
               className="input input-bordered w-full mb-4"
               placeholder="Search by name or email…"
