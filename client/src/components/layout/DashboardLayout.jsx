@@ -22,6 +22,7 @@ import {
   Users,
   X,
 } from 'lucide-react'
+import { SiteLogo } from './SiteLogo'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useProfiles'
 import { useConversations } from '../../hooks/useMessages'
@@ -484,9 +485,7 @@ export function DashboardLayout() {
           <label htmlFor="admin-nav" aria-label="Close navigation" className="drawer-overlay" />
           <aside className="flex h-full w-64 flex-col border-r border-base-200 bg-base-100">
             <div className="flex items-center gap-3 px-6 py-5">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-box bg-primary text-lg font-extrabold text-primary-content">
-                N
-              </div>
+              <SiteLogo className="h-10 w-10" />
               <div className="leading-tight">
                 <div className="text-base font-bold text-primary">NITER Job Portal</div>
                 <span className="badge badge-neutral badge-outline mt-0.5 badge-sm">
