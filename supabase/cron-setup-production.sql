@@ -13,13 +13,15 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA cron TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA cron TO postgres;
 
 -- 3. Schedule the interview-reminders edge function
--- Replace <YOUR_PROJECT_REF> and <YOUR_SERVICE_ROLE_KEY> with actual values
+-- Project ref is filled in below (public API URL, safe to commit).
+-- Paste <YOUR_SERVICE_ROLE_KEY> at run time in the dashboard ONLY —
+-- never commit the service_role key to this repo.
 SELECT cron.schedule(
   'interview-reminders-hourly',
   '0 * * * *',  -- every hour at minute 0 (e.g., 1:00, 2:00, 3:00...)
   $$
   SELECT net.http_post(
-    url := 'https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/interview-reminders',
+    url := 'https://jbykthdducpsyirztatq.supabase.co/functions/v1/interview-reminders',
     headers := jsonb_build_object(
       'Authorization', 'Bearer <YOUR_SERVICE_ROLE_KEY>',
       'Content-Type', 'application/json'

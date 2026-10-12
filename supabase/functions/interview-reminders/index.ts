@@ -22,7 +22,7 @@ Deno.serve(async () => {
       start_time,
       meeting_link,
       application_id,
-      applications(students(user_id))
+      applications(students(user_id), applicant_user_id)
     `)
     .eq('status', 'SCHEDULED')
     .gte('interview_date', from.toISOString().slice(0, 10))
@@ -34,7 +34,9 @@ Deno.serve(async () => {
 
   let notified = 0
   for (const interview of interviews ?? []) {
-    const user_id = interview.applications?.students?.user_id
+    const user_id =
+      interview.applications?.students?.user_id ??
+      interview.applications?.applicant_user_id
     if (!user_id) continue
 
     const { data: existing } = await supabase
