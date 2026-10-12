@@ -67,6 +67,29 @@ export default function RecruiterJobsPage() {
     }
   }
 
+  async function deleteJob(id, title) {
+    const confirmed = window.confirm(
+      `Delete "${title}" permanently? Its applications and interviews will also be removed. This cannot be undone.`,
+    )
+    if (!confirmed) return
+    setBusyId(id)
+    setMessage(null)
+    const { data, error } = await supabase
+      .from('jobs')
+      .delete()
+      .eq('id', id)
+      .eq('posted_by', session.user.id)
+      .eq('status', 'CLOSED')
+      .select('id')
+    setBusyId(null)
+    if (error || !data || data.length === 0) {
+      setMessage({ type: 'error', text: error?.message ?? 'Delete was not permitted for this job.' })
+    } else {
+      setJobs((prev) => prev.filter((j) => j.id !== id))
+      setMessage({ type: 'success', text: 'Closed job deleted.' })
+    }
+  }
+
   if (profileLoading || loading) {
     return <LoadingScreen />
   }
@@ -133,14 +156,19 @@ export default function RecruiterJobsPage() {
                   <Link to={`/recruiter/jobs/${j.id}/edit`} className="btn btn-sm btn-outline">
                     Edit
                   </Link>
-                  {j.status === 'DRAFT' && (
+                  {(j.status === 'DRAFT' || j.status === 'CLOSED') && (
                     <button className="btn btn-sm btn-primary" disabled={busyId === j.id} onClick={() => submitForApproval(j.id)}>
-                      {busyId === j.id ? <span className="loading loading-spinner loading-sm" /> : 'Submit for approval'}
+                      {busyId === j.id ? <span className="loading loading-spinner loading-sm" /> : j.status === 'CLOSED' ? 'Repost job' : 'Submit for approval'}
                     </button>
                   )}
                   {j.status === 'PUBLISHED' && (
                     <button className="btn btn-sm btn-outline" disabled={busyId === j.id} onClick={() => closeJob(j.id)}>
                       Close
+                    </button>
+                  )}
+                  {j.status === 'CLOSED' && (
+                    <button className="btn btn-sm btn-error btn-outline" disabled={busyId === j.id} onClick={() => deleteJob(j.id, j.title)}>
+                      {busyId === j.id ? <span className="loading loading-spinner loading-sm" /> : 'Delete'}
                     </button>
                   )}
                 </div>
@@ -155,14 +183,19 @@ export default function RecruiterJobsPage() {
                     <li>
                       <Link to={`/recruiter/jobs/${j.id}/edit`}>Edit</Link>
                     </li>
-                    {j.status === 'DRAFT' && (
+                    {(j.status === 'DRAFT' || j.status === 'CLOSED') && (
                       <li>
-                        <button onClick={() => submitForApproval(j.id)}>Submit for approval</button>
+                        <button onClick={() => submitForApproval(j.id)}>{j.status === 'CLOSED' ? 'Repost job' : 'Submit for approval'}</button>
                       </li>
                     )}
                     {j.status === 'PUBLISHED' && (
                       <li>
                         <button onClick={() => closeJob(j.id)}>Close job</button>
+                      </li>
+                    )}
+                    {j.status === 'CLOSED' && (
+                      <li>
+                        <button className="text-error" onClick={() => deleteJob(j.id, j.title)}>Delete job</button>
                       </li>
                     )}
                   </ul>

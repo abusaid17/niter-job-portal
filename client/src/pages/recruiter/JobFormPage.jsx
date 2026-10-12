@@ -224,7 +224,7 @@ export default function JobFormPage() {
           {editing ? `Edit ${job?.title ?? 'Job'}` : 'Post a New Job'}
         </h1>
         <p className="mt-1 text-base-content/70">
-          {editing ? 'Update the job details below. Changes go live immediately.' : 'The job is saved as a draft and submitted for admin approval.'}
+          {editing ? (job?.status === 'CLOSED' ? 'Update the closed job below, then repost it from My Jobs for admin approval.' : 'Update the job details below. Changes go live immediately.') : 'The job is saved as a draft and submitted for admin approval.'}
         </p>
       </div>
 
