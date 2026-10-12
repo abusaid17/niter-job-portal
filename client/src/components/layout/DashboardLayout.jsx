@@ -292,7 +292,7 @@ function NotificationsBell({ unread, items, markRead, markAllRead, deleteNotific
             </span>
           )}
         </summary>
-        <div className="dropdown-content z-40 w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-box border border-base-200 bg-base-100 shadow-lg">
+        <div className="dropdown-content z-40 w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-box border border-base-200 bg-base-100 shadow-lg max-sm:fixed! max-sm:inset-x-2! max-sm:top-16! max-sm:w-auto! max-sm:max-w-none!">
           <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
             <span className="text-sm font-bold">Notifications</span>
             {unread > 0 && (
@@ -611,7 +611,7 @@ export function DashboardLayout() {
                 {!menuOpen && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />}
               </span>
             </summary>
-            <ul className="dropdown-content menu z-30 w-72 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl border border-base-200 bg-base-100 p-2 shadow-xl">
+            <ul className="dropdown-content menu z-30 w-72 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl border border-base-200 bg-base-100 p-2 shadow-xl max-sm:fixed! max-sm:inset-x-2! max-sm:top-16! max-sm:w-auto! max-sm:max-w-none!">
               <li className="menu-title flex items-center justify-between px-3 py-2">
                 <span>Menu</span>
                 <span className="badge badge-neutral badge-outline badge-sm">{ROLE_LABELS[role]}</span>
