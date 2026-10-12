@@ -7,6 +7,8 @@ import {
   Building2,
   CalendarClock,
   CalendarDays,
+  ChevronDown,
+  ChevronRight,
   FileText,
   GraduationCap,
   LayoutDashboard,
@@ -14,6 +16,9 @@ import {
   Menu,
   MessageSquare,
   PieChart,
+  Plus,
+  Share2,
+  User,
   Users,
   X,
 } from 'lucide-react'
@@ -55,6 +60,33 @@ const NAV = {
   ],
 }
 
+const NAV_ICONS = {
+  Dashboard: LayoutDashboard,
+  Jobs: Briefcase,
+  Applications: FileText,
+  Events: CalendarDays,
+  'My Profile': User,
+  'Post a Job': Plus,
+  Referrals: Share2,
+  'My Jobs': Briefcase,
+  'Campus Recruitment': GraduationCap,
+  Company: Building2,
+  Students: Users,
+  'Career Events': CalendarDays,
+  Reports: BarChart3,
+}
+
+function useScrolled(threshold = 8) {
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > threshold)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [threshold])
+  return scrolled
+}
+
 const ADMIN_NAV = [
   { to: '/admin/dashboard', label: 'Dashboard', end: true, icon: LayoutDashboard },
   { to: '/admin/users', label: 'Users', icon: Users },
@@ -69,18 +101,91 @@ const ADMIN_NAV = [
   { to: '/notifications', label: 'Notifications', icon: Bell },
 ]
 
+const PROFILE_HOME = {
+  STUDENT: '/student/profile',
+  ALUMNI: '/alumni/profile',
+  RECRUITER: '/recruiter/company',
+  FACULTY: '/faculty/profile',
+}
+
+function UserMenu({ name, email, profileTo, onLogout, loggingOut }) {
+  const [open, setOpen] = useState(false)
+  const initial = ((name || '').trim().charAt(0) || (email || '').trim().charAt(0) || 'U').toUpperCase()
+  return (
+    <details
+      className="dropdown dropdown-end"
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary
+        className="btn btn-ghost btn-sm flex items-center gap-1 rounded-full py-1 pl-1 pr-2 transition-transform hover:scale-[1.03] active:scale-95"
+        aria-label="Account menu"
+        aria-expanded={open}
+      >
+        <span className="avatar placeholder">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-primary-content ring-2 ring-primary/20">
+            <span className="text-xs font-bold">{initial}</span>
+          </span>
+        </span>
+        <span className="hidden max-w-28 truncate text-sm font-medium xl:block">{name || email}</span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-base-content/60 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </summary>
+      <ul className="dropdown-content menu z-30 w-60 max-w-[calc(100vw-2rem)] rounded-2xl border border-base-200 bg-base-100 p-2 shadow-xl">
+        <li className="menu-title px-2 py-1">
+          <span className="flex items-center gap-2.5 rounded-xl bg-base-200/60 px-2.5 py-2 normal-case">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-sm font-bold text-primary-content">
+              {initial}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm">{name || 'Account'}</span>
+              {name && <span className="block truncate text-[11px] font-normal opacity-60">{email}</span>}
+            </span>
+          </span>
+        </li>
+        <li>
+          <Link to={profileTo} onClick={() => setOpen(false)} className="rounded-xl font-medium">
+            <User className="h-4 w-4 text-primary" /> My Profile
+            <ChevronRight className="ml-auto h-4 w-4 opacity-40" />
+          </Link>
+        </li>
+        <li>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false)
+              onLogout()
+            }}
+            disabled={loggingOut}
+            className="rounded-xl font-medium text-error"
+          >
+            {loggingOut ? (
+              <span className="loading loading-spinner loading-xs" />
+            ) : (
+              <LogOut className="h-4 w-4" />
+            )}
+            Logout
+          </button>
+        </li>
+      </ul>
+    </details>
+  )
+}
+
 function MessagesBell({ unread }) {
   const displayCount = unread > 99 ? '99+' : unread
 
   return (
     <Link
       to="/messages"
-      className="btn btn-ghost btn-sm relative"
+      className="btn btn-ghost btn-sm btn-circle relative transition-transform hover:scale-105 active:scale-95"
       aria-label={`Messages${unread > 0 ? `, ${displayCount} unread` : ''}`}
     >
       <MessageSquare className="h-5 w-5" />
       {unread > 0 && (
-        <span className="badge badge-primary badge-sm absolute -right-1 -top-1">{displayCount}</span>
+        <span className="absolute -right-0.5 -top-0.5 flex">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
+          <span className="badge badge-primary badge-sm relative">{displayCount}</span>
+        </span>
       )}
     </Link>
   )
@@ -176,12 +281,15 @@ function NotificationsBell({ unread, items, markRead, markAllRead, deleteNotific
   return (
     <div ref={wrapRef} className="dropdown dropdown-end">
       <details ref={detailsRef} className="dropdown-trigger">
-        <summary className="btn btn-ghost btn-sm relative" aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}>
+        <summary className="btn btn-ghost btn-sm btn-circle relative transition-transform hover:scale-105 active:scale-95" aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ''}`}>
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
           {unread > 0 && (
-            <span className="badge badge-error badge-sm absolute -right-1 -top-1">{unread}</span>
+            <span className="absolute -right-0.5 -top-0.5 flex">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-60" />
+              <span className="badge badge-error badge-sm relative">{unread}</span>
+            </span>
           )}
         </summary>
         <div className="dropdown-content z-40 w-[22rem] max-w-[calc(100vw-1rem)] overflow-hidden rounded-box border border-base-200 bg-base-100 shadow-lg">
@@ -309,6 +417,10 @@ export function DashboardLayout() {
   const [loggingOut, setLoggingOut] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const drawerToggleRef = useRef(null)
+  const scrolled = useScrolled()
+  const glass = scrolled
+    ? 'bg-base-100/85 shadow-md backdrop-blur-xl supports-[backdrop-filter]:bg-base-100/70'
+    : 'bg-base-100 shadow-sm'
 
   if (!session) {
     return <Navigate to="/login" replace />
@@ -338,12 +450,12 @@ export function DashboardLayout() {
         />
 
         <div className="drawer-content flex min-h-svh flex-col bg-base-200">
-          <header className="navbar sticky top-0 z-20 bg-base-100 shadow-sm lg:hidden">
+          <header className={`navbar sticky top-0 z-20 transition-all duration-300 lg:hidden ${glass}`}>
             <label htmlFor="admin-nav" aria-label="Open navigation" className="btn btn-ghost btn-sm">
               <Menu className="h-5 w-5" />
             </label>
-            <div className="flex-1 px-1">
-              <Link to="/" className="text-xl font-bold text-primary">
+            <div className="flex-1 min-w-0 px-1">
+              <Link to="/" className="truncate text-lg font-bold text-primary sm:text-xl">
                 NITER Job Portal
               </Link>
             </div>
@@ -353,7 +465,7 @@ export function DashboardLayout() {
             </div>
           </header>
 
-          <header className="navbar sticky top-0 z-20 hidden bg-base-100 shadow-sm lg:flex">
+          <header className={`navbar sticky top-0 z-20 hidden transition-all duration-300 lg:flex ${glass}`}>
             <div className="flex-1 px-4 text-sm text-base-content/60">
               {ROLE_LABELS[role]} panel
             </div>
@@ -384,6 +496,7 @@ export function DashboardLayout() {
             </div>
 
             <nav className="flex-1 overflow-y-auto px-3 pb-4">
+              <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-wider text-base-content/40">Manage</p>
               <ul className="flex flex-col gap-1">
                 {ADMIN_NAV.map((item) => (
                   <li key={item.to}>
@@ -394,14 +507,14 @@ export function DashboardLayout() {
                         if (drawerToggleRef.current) drawerToggleRef.current.checked = false
                       }}
                       className={({ isActive }) =>
-                        `relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                        `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:translate-x-0.5 ${
                           isActive
-                            ? 'bg-primary/10 text-primary'
+                            ? 'bg-primary text-primary-content shadow-md shadow-primary/25'
                             : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
                         }`
                       }
                     >
-                      {item.icon && <item.icon className="h-5 w-5 shrink-0" />}
+                      {item.icon && <item.icon className="h-5 w-5 shrink-0 opacity-90" />}
                       <span className="truncate">{item.label}</span>
                     </NavLink>
                   </li>
@@ -414,17 +527,17 @@ export function DashboardLayout() {
                       if (drawerToggleRef.current) drawerToggleRef.current.checked = false
                     }}
                     className={({ isActive }) =>
-                      `relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all hover:translate-x-0.5 ${
                         isActive
-                          ? 'bg-primary/10 text-primary'
+                          ? 'bg-primary text-primary-content shadow-md shadow-primary/25'
                           : 'text-base-content/70 hover:bg-base-200 hover:text-base-content'
                       }`
                     }
                   >
-                    <MessageSquare className="h-5 w-5 shrink-0" />
+                    <MessageSquare className="h-5 w-5 shrink-0 opacity-90" />
                     <span className="truncate">Messages</span>
                     {unreadMessages > 0 && (
-                      <span className="badge badge-primary badge-sm ml-auto">{unreadMessages > 99 ? '99+' : unreadMessages}</span>
+                      <span className="badge badge-sm ml-auto bg-white/25 text-inherit">{unreadMessages > 99 ? '99+' : unreadMessages}</span>
                     )}
                   </NavLink>
                 </li>
@@ -455,60 +568,87 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-svh bg-base-200">
-      <header className="navbar sticky top-0 z-20 bg-base-100 shadow-sm">
-        <div className="flex-1 px-2">
-          <Link to="/" className="text-xl font-bold text-primary">
+      <header className={`navbar sticky top-0 z-20 gap-1 px-2 transition-all duration-300 sm:px-4 ${glass}`}>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Link to="/" className="truncate text-lg font-bold text-primary sm:text-xl">
             NITER Job Portal
           </Link>
-          <span className="badge badge-neutral badge-outline ml-3">{ROLE_LABELS[role]}</span>
+          <span className="badge badge-neutral badge-outline hidden shrink-0 sm:inline-flex">{ROLE_LABELS[role]}</span>
         </div>
 
-        <nav className="hidden gap-1 px-2 md:flex">
-          {navLinks.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `btn btn-sm btn-ghost${isActive ? ' btn-active' : ''}`
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
+        <nav className="hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto px-2 md:flex" aria-label="Primary">
+          {navLinks.map((item) => {
+            const Icon = NAV_ICONS[item.label] ?? LayoutDashboard
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `btn btn-sm shrink-0 gap-1.5 whitespace-nowrap rounded-full transition-all hover:scale-[1.02] active:scale-95 ${
+                    isActive
+                      ? 'btn-primary shadow-md shadow-primary/25'
+                      : 'btn-ghost text-base-content/70 hover:text-base-content'
+                  }`
+                }
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </NavLink>
+            )
+          })}
         </nav>
 
-        <div className="flex items-center gap-2 px-2">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <details
             className="dropdown dropdown-end md:hidden"
             open={menuOpen}
             onToggle={(e) => setMenuOpen(e.currentTarget.open)}
           >
-            <summary className="btn btn-ghost btn-sm" aria-label="Open navigation menu">
-              <Menu className="h-5 w-5" />
+            <summary className="btn btn-ghost btn-sm btn-circle" aria-label="Open navigation menu">
+              <span className="relative">
+                <Menu className={`h-5 w-5 transition-transform duration-200 ${menuOpen ? 'rotate-90 scale-90' : ''}`} />
+                {!menuOpen && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary" aria-hidden="true" />}
+              </span>
             </summary>
-            <ul className="dropdown-content menu z-30 w-72 max-h-[70vh] overflow-y-auto rounded-box bg-base-100 p-2 shadow-lg">
-              {navLinks.map((item) => (
-                <li key={item.to}>
-                  <NavLink
-                    to={item.to}
-                    end={item.end}
-                    onClick={() => setMenuOpen(false)}
-                    className={({ isActive }) => (isActive ? 'bg-primary text-primary-content' : '')}
-                  >
-                    {item.label}
-                  </NavLink>
-                </li>
-              ))}
+            <ul className="dropdown-content menu z-30 w-72 max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto rounded-2xl border border-base-200 bg-base-100 p-2 shadow-xl">
+              <li className="menu-title flex items-center justify-between px-3 py-2">
+                <span>Menu</span>
+                <span className="badge badge-neutral badge-outline badge-sm">{ROLE_LABELS[role]}</span>
+              </li>
+              {navLinks.map((item) => {
+                const Icon = NAV_ICONS[item.label] ?? LayoutDashboard
+                return (
+                  <li key={item.to}>
+                    <NavLink
+                      to={item.to}
+                      end={item.end}
+                      onClick={() => setMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex min-h-[44px] items-center gap-3 rounded-xl px-3 font-medium transition-colors ${
+                          isActive ? 'bg-primary text-primary-content shadow-md shadow-primary/25' : 'hover:bg-base-200'
+                        }`
+                      }
+                    >
+                      <Icon className="h-5 w-5 shrink-0 opacity-80" />
+                      {item.label}
+                      <ChevronRight className="ml-auto h-4 w-4 opacity-40" />
+                    </NavLink>
+                  </li>
+                )
+              })}
             </ul>
           </details>
           <MessagesBell unread={unreadMessages} />
           <NotificationsBell unread={unread} items={items} markRead={markRead} markAllRead={markAllRead} deleteNotification={deleteNotification} clearAll={clearAll} role={role} />
 
-          <span className="hidden text-sm font-medium md:block">{profile?.name || session.user.email}</span>
-          <button type="button" className="btn btn-sm btn-outline" onClick={onLogout} disabled={loggingOut}>
-            {loggingOut ? <span className="loading loading-spinner loading-xs" /> : 'Logout'}
-          </button>
+          <UserMenu
+            name={profile?.name}
+            email={session.user.email}
+            profileTo={PROFILE_HOME[role] ?? '/'}
+            onLogout={onLogout}
+            loggingOut={loggingOut}
+          />
         </div>
       </header>
 

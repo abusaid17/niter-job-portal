@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { GraduationCap, Link2, Mail, Pencil } from 'lucide-react'
+import { AlertCircle, CheckCircle2, GraduationCap, Link2, Mail, Pencil, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../hooks/useAuth'
 import { useAlumniProfile } from '../../hooks/useProfiles'
@@ -8,21 +8,28 @@ import { LoadingScreen } from '../../components/ui/LoadingScreen'
 
 function Card({ title, subtitle, children }) {
   return (
-    <div className="card bg-base-100 shadow-sm">
-      <div className="card-body">
-        <h2 className="card-title">{title}</h2>
+    <div className="card border border-base-200 bg-base-100 shadow-sm">
+      <div className="card-body px-5 py-5 sm:px-6">
+        <h2 className="card-title text-lg">{title}</h2>
         {subtitle && <p className="text-sm text-base-content/60">{subtitle}</p>}
-        <div className="mt-2">{children}</div>
+        <div className="mt-3">{children}</div>
       </div>
     </div>
   )
 }
 
-function Flash({ message }) {
+function Flash({ message, onDismiss }) {
   if (!message) return null
+  const isError = message.type === 'error'
   return (
-    <div role="alert" className={`alert text-sm ${message.type === 'error' ? 'alert-error' : 'alert-success'}`}>
-      {message.text}
+    <div role="alert" className={`alert shadow-sm ${isError ? 'alert-error' : 'alert-success'} text-sm`}>
+      {isError ? <AlertCircle className="h-5 w-5 shrink-0" /> : <CheckCircle2 className="h-5 w-5 shrink-0" />}
+      <span className="flex-1">{message.text}</span>
+      {onDismiss && (
+        <button type="button" className="btn btn-ghost btn-xs btn-circle shrink-0" onClick={onDismiss} aria-label="Dismiss message">
+          <X className="h-4 w-4" />
+        </button>
+      )}
     </div>
   )
 }
@@ -73,29 +80,35 @@ function ProfileView({ profile, email, onEdit }) {
   ].filter(([, v]) => v != null && String(v).trim() !== '')
 
   return (
-    <div className="card bg-base-100 shadow-sm">
-      <div className="card-body">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-box bg-primary text-2xl font-extrabold text-primary-content">
-              {initial}
+    <div className="card overflow-hidden border border-base-200 bg-base-100 shadow-sm">
+      <div className="h-20 bg-gradient-to-r from-primary via-primary/80 to-secondary sm:h-24" />
+      <div className="card-body px-5 pt-0 sm:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="-mt-8 flex items-end gap-4 sm:-mt-10">
+            <div className="avatar">
+              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-primary text-3xl font-extrabold text-primary-content ring-4 ring-base-100 sm:h-24 sm:w-24">
+                {initial}
+              </div>
             </div>
-            <div className="min-w-0">
-              <h2 className="card-title text-xl">{name}</h2>
+            <div className="min-w-0 pb-0.5">
+              <h2 className="truncate text-xl font-extrabold sm:text-2xl">{name}</h2>
               {email && (
-                <p className="mt-0.5 flex items-center gap-1.5 text-sm text-base-content/60">
-                  <Mail className="h-4 w-4" />
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-base-content/60 sm:text-sm">
+                  <Mail className="h-4 w-4 shrink-0" />
                   <span className="truncate">{email}</span>
                 </p>
               )}
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {profile?.department && <span className="badge badge-outline badge-sm">Dept: {profile.department}</span>}
-                {profile?.graduation_year && <span className="badge badge-outline badge-sm">Grad: {profile.graduation_year}</span>}
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {profile?.department && <span className="badge badge-primary badge-sm">{profile.department}</span>}
+                {profile?.graduation_year && <span className="badge badge-outline badge-sm">Class of {profile.graduation_year}</span>}
+                {profile?.current_position && profile?.current_company && (
+                  <span className="badge badge-ghost badge-sm">{profile.current_position} · {profile.current_company}</span>
+                )}
                 {profile?.is_verified && <span className="badge badge-success badge-sm">Verified</span>}
               </div>
             </div>
           </div>
-          <button type="button" className="btn btn-outline btn-sm" onClick={onEdit}>
+          <button type="button" className="btn btn-primary shrink-0" onClick={onEdit}>
             <Pencil className="h-4 w-4" />
             Edit profile
           </button>
@@ -258,28 +271,44 @@ export default function AlumniProfilePage() {
     }
   }
 
+  function cancelEdit() {
+    if (profile) {
+      setFields({
+        student_id: profile.student_id ?? '',
+        graduation_year: profile.graduation_year ?? '',
+        department: profile.department ?? '',
+        current_company: profile.current_company ?? '',
+        current_position: profile.current_position ?? '',
+        industry: profile.industry ?? '',
+        linkedin_url: profile.linkedin_url ?? '',
+        bio: profile.bio ?? '',
+        name: profile.users?.name ?? '',
+      })
+    }
+    setFlash(null)
+    setMode('view')
+  }
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold">Alumni Profile</h1>
-          <p className="text-sm text-base-content/70">
-            Tell the community what you are doing now so fellow alumni and students can reach out.
-          </p>
-        </div>
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 sm:gap-6">
+      <div>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">Alumni Profile</h1>
+        <p className="mt-1 text-sm text-base-content/60">
+          Tell the community what you are doing now so fellow alumni and students can reach out.
+        </p>
       </div>
 
-      <Flash message={flash} />
+      <Flash message={flash} onDismiss={() => setFlash(null)} />
 
-      <div className="card bg-base-100 shadow-sm">
-        <div className="card-body">
-          <div className="flex items-center justify-between">
+      <div className="card border border-base-200 bg-base-100 shadow-sm">
+        <div className="card-body px-5 py-5 sm:px-6">
+          <div className="flex items-center justify-between gap-2">
             <div className="card-title text-base">Profile completeness</div>
-            <span className={`text-2xl font-extrabold ${completion.percent >= 80 ? 'text-success' : 'text-primary'}`}>
+            <span className={`badge badge-lg ${completion.percent >= 80 ? 'badge-success' : 'badge-primary'}`}>
               {completion.percent}%
             </span>
           </div>
-          <progress className="progress progress-primary w-full" value={completion.percent} max="100" />
+          <progress className="progress progress-primary mt-3 h-2.5 w-full" value={completion.percent} max="100" />
           <div className="mt-3 flex flex-wrap gap-1.5 text-xs">
             {[
               'Student ID',
@@ -398,7 +427,10 @@ export default function AlumniProfilePage() {
                 </Field>
               </FieldGroup>
             </div>
-            <div className="mt-8 flex justify-end">
+            <div className="mt-8 flex flex-col-reverse justify-end gap-2 border-t border-base-200 pt-5 sm:flex-row">
+              <button type="button" className="btn btn-ghost" onClick={cancelEdit} disabled={saving}>
+                Cancel
+              </button>
               <button type="submit" className="btn btn-primary" disabled={saving}>
                 {saving ? <span className="loading loading-spinner loading-xs" /> : 'Save profile'}
               </button>
@@ -459,12 +491,12 @@ function EducationSection({ alumniId }) {
     <Card title="Education" subtitle="Degrees and certifications.">
       <Flash message={flash} />
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
-        <input className="input input-bordered col-span-2" placeholder="Degree" value={form.degree} onChange={(e) => setForm({ ...form, degree: e.target.value })} />
-        <input className="input input-bordered col-span-2" placeholder="Institution" value={form.institution} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
-        <input className="input input-bordered col-span-2" placeholder="Field of study" value={form.field} onChange={(e) => setForm({ ...form, field: e.target.value })} />
-        <input className="input input-bordered" placeholder="From" inputMode="numeric" value={form.start_year} onChange={(e) => setForm({ ...form, start_year: e.target.value })} />
-        <input className="input input-bordered" placeholder="To" inputMode="numeric" value={form.end_year} onChange={(e) => setForm({ ...form, end_year: e.target.value })} />
-        <input className="input input-bordered" placeholder="GPA" value={form.gpa} onChange={(e) => setForm({ ...form, gpa: e.target.value })} />
+        <input className="input input-bordered w-full col-span-2" placeholder="Degree" value={form.degree} onChange={(e) => setForm({ ...form, degree: e.target.value })} />
+        <input className="input input-bordered w-full col-span-2" placeholder="Institution" value={form.institution} onChange={(e) => setForm({ ...form, institution: e.target.value })} />
+        <input className="input input-bordered w-full col-span-2" placeholder="Field of study" value={form.field} onChange={(e) => setForm({ ...form, field: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="From" inputMode="numeric" value={form.start_year} onChange={(e) => setForm({ ...form, start_year: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="To" inputMode="numeric" value={form.end_year} onChange={(e) => setForm({ ...form, end_year: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="GPA" value={form.gpa} onChange={(e) => setForm({ ...form, gpa: e.target.value })} />
         <button type="button" className="btn btn-sm btn-primary" onClick={onAdd}>
           Add
         </button>
@@ -544,10 +576,10 @@ function SkillsSection({ alumniId }) {
       <div className="mt-4 flex flex-wrap gap-2">
         {rows.length === 0 && <p className="text-sm text-base-content/50">No skills added.</p>}
         {rows.map((r) => (
-          <span key={r.id} className="badge badge-outline gap-2 px-3 py-3">
+          <span key={r.id} className="badge badge-lg gap-2 border-primary/20 bg-primary/5 py-4 pl-4 pr-2 font-medium">
             {r.skills?.name}
-            <button type="button" className="cursor-pointer text-error" onClick={() => onDelete(r.id)} title="Remove skill">
-              ✕
+            <button type="button" className="btn btn-ghost btn-xs btn-circle text-base-content/50 hover:text-error" onClick={() => onDelete(r.id)} title="Remove skill" aria-label={`Remove ${r.skills?.name}`}>
+              <X className="h-3.5 w-3.5" />
             </button>
           </span>
         ))}
@@ -596,9 +628,9 @@ function ExperienceSection({ alumniId }) {
     <Card title="Experience" subtitle="Work history.">
       <Flash message={flash} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <input className="input input-bordered" placeholder="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
-        <input className="input input-bordered" placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
-        <input className="input input-bordered" placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="Role" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="Company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="Location" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
         <div className="grid grid-cols-2 gap-3">
           <input className="input input-bordered" type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} />
           <input className="input input-bordered" type="date" value={form.end_date} disabled={form.is_current} onChange={(e) => setForm({ ...form, end_date: e.target.value })} />
@@ -674,12 +706,12 @@ function ProjectsSection({ alumniId }) {
     <Card title="Projects" subtitle="Notable projects.">
       <Flash message={flash} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <input className="input input-bordered" placeholder="Project title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-        <input className="input input-bordered" placeholder="Link" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
-        <input className="input input-bordered" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="Project title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="Link" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
+        <input className="input input-bordered w-full" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
         <div className="grid grid-cols-2 gap-3">
-          <input className="input input-bordered" placeholder="From year" inputMode="numeric" value={form.start_year} onChange={(e) => setForm({ ...form, start_year: e.target.value })} />
-          <input className="input input-bordered" placeholder="To year" inputMode="numeric" value={form.end_year} onChange={(e) => setForm({ ...form, end_year: e.target.value })} />
+          <input className="input input-bordered w-full" placeholder="From year" inputMode="numeric" value={form.start_year} onChange={(e) => setForm({ ...form, start_year: e.target.value })} />
+          <input className="input input-bordered w-full" placeholder="To year" inputMode="numeric" value={form.end_year} onChange={(e) => setForm({ ...form, end_year: e.target.value })} />
         </div>
         <button type="button" className="btn btn-sm btn-primary justify-self-end" onClick={onAdd}>
           Add
