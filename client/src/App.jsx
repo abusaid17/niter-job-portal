@@ -29,6 +29,7 @@ import ApplicantsPage from './pages/recruiter/ApplicantsPage'
 import ApplicantDetailPage from './pages/recruiter/ApplicantDetailPage'
 import CampusRecruitmentPage from './pages/recruiter/CampusRecruitmentPage'
 import FacultyDashboardPage from './pages/faculty/FacultyDashboardPage'
+import FacultyProfilePage from './pages/faculty/FacultyProfilePage'
 import FacultyStudentsPage from './pages/faculty/FacultyStudentsPage'
 import FacultyStudentReviewPage from './pages/faculty/FacultyStudentReviewPage'
 import FacultyEventsPage from './pages/faculty/FacultyEventsPage'
@@ -194,6 +195,7 @@ export default function App() {
             }
           >
             <Route path="/faculty/dashboard" element={<FacultyDashboardPage />} />
+            <Route path="/faculty/profile" element={<FacultyProfilePage />} />
             <Route path="/faculty/students" element={<FacultyStudentsPage />} />
             <Route path="/faculty/students/:studentId" element={<FacultyStudentReviewPage />} />
             <Route path="/faculty/events" element={<FacultyEventsPage />} />

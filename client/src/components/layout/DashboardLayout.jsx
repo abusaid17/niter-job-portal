@@ -48,6 +48,7 @@ const NAV = {
   ],
   FACULTY: [
     { to: '/faculty/dashboard', label: 'Dashboard', end: true },
+    { to: '/faculty/profile', label: 'My Profile' },
     { to: '/faculty/students', label: 'Students' },
     { to: '/faculty/events', label: 'Career Events' },
     { to: '/faculty/reports', label: 'Reports' },
