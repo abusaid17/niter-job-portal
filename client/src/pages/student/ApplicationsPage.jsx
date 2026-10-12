@@ -8,6 +8,35 @@ import { LoadingScreen } from '../../components/ui/LoadingScreen'
 
 const STATUSES = ['ALL', ...Object.keys(APPLICATION_STATUS)]
 
+// Visual pipeline only: maps each status onto the hiring stages.
+// Terminal states (Rejected/Withdrawn/Expired) render all steps neutral;
+// the status badge next to the tracker names the end state.
+const STAGES = ['APPLIED', 'UNDER_REVIEW', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'SELECTED']
+
+function StageTracker({ status }) {
+  const current = STAGES.indexOf(status)
+  return (
+    <div
+      className="mt-1.5 flex max-w-56 flex-wrap items-center gap-y-1"
+      role="img"
+      aria-label={`Pipeline progress: ${APPLICATION_STATUS[status] ?? status}`}
+    >
+      {STAGES.map((s, i) => (
+        <span key={s} className="flex items-center" title={APPLICATION_STATUS[s] ?? s}>
+          <span
+            className={`h-2 w-2 rounded-full ${
+              i < current ? 'bg-success' : i === current ? 'bg-primary ring-2 ring-primary/30' : 'bg-base-300'
+            }`}
+          />
+          {i < STAGES.length - 1 && (
+            <span className={`mx-0.5 h-px w-3 ${i < current ? 'bg-success' : 'bg-base-300'}`} />
+          )}
+        </span>
+      ))}
+    </div>
+  )
+}
+
 export default function ApplicationsPage() {
   const { profile, loading: profileLoading } = useStudentProfile()
   const navigate = useNavigate()
@@ -139,6 +168,7 @@ export default function ApplicationsPage() {
                         <span className={`badge badge-sm ${APPLICATION_BADGE[a.status] ?? 'badge-ghost'}`}>
                           {APPLICATION_STATUS[a.status] ?? a.status}
                         </span>
+                        <StageTracker status={a.status} />
                         <span className={`block text-xs ${APPLICATION_COLORS[a.status] ?? ''}`}>
                           {counts[a.status]} total
                         </span>
